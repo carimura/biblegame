@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Shepherd's Song</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--cream:#fbf3df;--ink:#3b2f2a;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .2 0 0 0 0 .1 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+html,body{height:100%;margin:0;background:#17142a;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center;font-family:"Iowan Old Style",Palatino,Georgia,serif;color:var(--ink);user-select:none;-webkit-user-select:none}
+#stage{position:relative;flex:none;width:1600px;height:900px;overflow:hidden;background:#2c3868}
+#world,.scene{position:absolute;inset:0}
+#hud{position:absolute;left:0;top:0;width:1600px;height:900px;transform:scale(var(--s,1));transform-origin:0 0;pointer-events:none}
+.layer{position:absolute;left:0;top:0;overflow:visible;will-change:transform;pointer-events:none}
+.far{filter:blur(calc(1.2px*var(--s,1)))}.mid{filter:blur(calc(.5px*var(--s,1)))}.fore{filter:blur(calc(1.5px*var(--s,1)))}
+.fx{position:absolute;inset:0;pointer-events:none}
+
+/* actors */
+.live,.wonder,#gate{pointer-events:auto;cursor:pointer}
+#fold{pointer-events:auto}
+.walk .bob{animation:bob var(--tempo,.44s) ease-in-out var(--phase,0s) infinite}
+@keyframes bob{50%{transform:translateY(-4px) rotate(-1.5deg)}}
+.face{transform:scaleX(var(--dir,1))}
+.leg,.legs rect{transform-box:fill-box;transform-origin:50% 0}
+.david .side,.david.walk .front{display:none}
+.david.walk .side{display:inline}
+.walk .leg{animation:swing calc(var(--tempo,.44s)*2) ease-in-out var(--phase,0s) infinite}
+.walk .leg.b{animation-delay:calc(var(--phase,0s) - var(--tempo,.44s))}
+@keyframes swing{0%,100%{transform:rotate(24deg)}50%{transform:rotate(-24deg)}}
+/* his staff and the arm holding it swing from the shoulder: planted ahead, left behind, lifted and brought forward */
+.stick{transform-origin:2px -150px}
+.walk .stick{animation:staff calc(var(--tempo,.44s)*2) ease-in-out var(--phase,0s) infinite}
+@keyframes staff{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(9deg)}76%{transform:translateY(-9px) rotate(-1deg)}}
+.walk .legs rect{animation:trot calc(var(--tempo,.44s)*2) ease-in-out var(--phase,0s) infinite}
+.walk .legs rect:nth-child(even){animation-delay:calc(var(--phase,0s) - var(--tempo,.44s))}
+@keyframes trot{0%,100%{transform:rotate(17deg)}50%{transform:rotate(-17deg)}}
+.sheep .shut{display:none}
+.asleep .legs,.asleep .eye{display:none}
+.resting .legs{display:none}
+.resting .bob{transform:translateY(13px)}
+.head{transform-box:fill-box;transform-origin:15% 60%}
+.grazing .head{animation:nibble 1.1s ease-in-out var(--phase,0s) infinite}
+@keyframes nibble{0%,100%{transform:translate(2px,26px) rotate(34deg)}50%{transform:translate(2px,31px) rotate(41deg)}}
+.asleep .shut{display:inline}
+.asleep .bob{animation:breathe 3.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:translateY(13px)}50%{transform:translateY(10px)}}
+.tag{opacity:0;transition:opacity .3s;pointer-events:none}
+.named .tag{opacity:1}
+.tag text{font:600 28px Georgia,serif;fill:var(--ink)}
+#gate{transition:transform 1.4s ease-in-out}
+#gate.open{transform:scaleX(.16) skewY(-14deg);pointer-events:none}
+
+/* the sky moves: clouds drift round and round, and every so often birds cross it */
+.drift{animation:drift 520s linear infinite}
+@keyframes drift{from{translate:calc(var(--s,1)*-2000px) 0}to{translate:0 0}}
+.birds{animation:cross 48s linear 6s infinite backwards}
+@keyframes cross{0%{translate:calc(var(--s,1)*-420px) 0}40%,100%{translate:calc(var(--s,1)*2050px) calc(var(--s,1)*-80px)}}
+.bird{animation:soar 2.6s ease-in-out infinite alternate}
+@keyframes soar{to{transform:translateY(12px)}}
+.wing{transform-box:fill-box;transform-origin:50% 100%;animation:flap .4s ease-in-out infinite alternate}
+@keyframes flap{to{transform:scaleY(-.45)}}
+/* a bird that is clicked flutters up and beats its wings fast */
+.flier.play .bird{animation:flit 2s ease-in-out}
+.flier.play .wing{animation-duration:.13s}
+@keyframes flit{20%{transform:translateY(-30px) rotate(-14deg)}45%{transform:translateY(-6px) rotate(8deg)}70%{transform:translateY(-22px) rotate(-8deg)}}
+
+/* scenery that answers a click */
+.halo{pointer-events:none}
+.play .tw{animation:twinkle 1.2s ease-in-out}
+@keyframes twinkle{40%{transform:scale(1.9) rotate(45deg)}}
+.play .rock{animation:rock 1.6s ease-in-out}
+@keyframes rock{25%{transform:rotate(14deg)}60%{transform:rotate(-10deg)}}
+.play .halo{animation:shine 1.8s ease-in-out}
+@keyframes shine{45%{transform:scale(1.14);opacity:.5}}
+.play .sway{animation:sway 1.8s ease-in-out}
+@keyframes sway{25%{transform:rotate(2.2deg)}60%{transform:rotate(-1.6deg)}85%{transform:rotate(.6deg)}}
+.poppy{transform-box:fill-box;transform-origin:50% 100%}
+.poppy.play{animation:nod 1.4s ease-in-out}
+@keyframes nod{25%{transform:rotate(12deg) scale(1.15)}60%{transform:rotate(-9deg) scale(1.1)}}
+.sheep.play .bob{animation:hop .55s ease-out}
+@keyframes hop{40%{transform:translateY(-22px)}}
+
+/* paper cards */
+.card{background:var(--cream) var(--grain);box-shadow:4px 7px 0 rgba(60,40,70,.16),8px 16px 24px rgba(40,25,60,.38)}
+.bubble{position:absolute;transform:translate(-50%,-100%) rotate(-1deg);width:max-content;max-width:540px;padding:24px 34px;border-radius:28px;font-size:30px;line-height:1.35;opacity:0;transition:opacity .3s}
+.bubble.on{opacity:1}
+.bubble.on,.note.on{pointer-events:auto} /* cards block clicks on what is behind them */
+.bubble::after{content:"";position:absolute;left:50%;bottom:-24px;margin-left:-16px;border:16px solid transparent;border-bottom:0;border-top:26px solid var(--cream)}
+.go{float:right;margin:-4px -14px 0 14px;font-size:1.6em;line-height:1;font-style:normal;color:#b65a3c;animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+.sc{text-transform:uppercase;font-size:.8em;letter-spacing:.04em}
+.note{position:absolute;z-index:1;transform:translate(-50%,-100%) rotate(1deg);width:max-content;max-width:470px;padding:18px 26px 16px;border-radius:14px;font-size:23px;line-height:1.35;text-align:center;opacity:0;transition:opacity .35s}
+.note.below{transform:translate(-50%,0) rotate(1deg)}
+.note.on{opacity:1}
+.note b{display:block;margin-bottom:8px;font-size:26px}
+.note q{display:block;font-style:italic;quotes:"\201C" "\201D"}
+.note cite{display:block;margin-top:8px;font-size:18px;font-style:normal;letter-spacing:.03em;color:#b65a3c}
+.count{position:absolute;z-index:1;width:76px;height:76px;margin:-92px 0 0 -38px;border-radius:50%;display:grid;place-items:center;font-size:46px;font-weight:600;pointer-events:none;animation:count 2s ease-out both}
+@keyframes count{0%{scale:.3;opacity:0}10%{scale:1.3;opacity:1}20%{scale:1}75%{opacity:1;translate:0 -26px}100%{opacity:0;translate:0 -40px}}
+.beacon{fill:none;stroke:rgba(255,246,200,.95);stroke-width:5;pointer-events:none;transform-box:fill-box;transform-origin:center;animation:ring 1.6s ease-out infinite}
+.way{position:absolute;top:286px;width:104px;height:104px;border-radius:50%;display:grid;place-items:center;opacity:0;transition:opacity .6s}
+.way.right{right:26px}
+.way.left{left:26px;--d:-10px}
+.way.left svg{transform:scaleX(-1)}
+.way.on{opacity:1;pointer-events:auto;cursor:pointer;animation:nudge 1.5s ease-in-out infinite}
+@keyframes nudge{50%{translate:var(--d,10px) 0}}
+.place{position:absolute;left:50%;top:56px;transform:translateX(-50%) rotate(-1deg);padding:18px 46px;border-radius:16px;text-align:center;font-size:40px;font-weight:600;opacity:0;transition:opacity 1s}
+.place.on{opacity:1}
+.place small{display:block;margin-top:4px;font-size:20px;font-weight:400;opacity:.7}
+.bubble small{display:block;margin-top:8px;font-size:.62em;letter-spacing:.03em;color:#b65a3c}
+
+/* night and lamplight: a dark wash over the scene, with a hole in it where the scene says there is light.
+   Inside the hole the picture is as clear as by day; a faint warm tint sits over it. The hole opens as the light is lit. */
+@property --lr{syntax:'<length>';inherits:true;initial-value:0px}
+.scene{--lr:0px;transition:--lr 1.6s}
+.scene.lit{--lr:520px}
+.fx.dark{mix-blend-mode:multiply;--hole:radial-gradient(circle calc(var(--s,1)*var(--lr)) at var(--lx,-999px) var(--ly,-999px),transparent 34%,#000);-webkit-mask-image:var(--hole);mask-image:var(--hole)}
+.fx.glow{background:radial-gradient(circle calc(var(--s,1)*420px) at var(--lx,-999px) var(--ly,-999px),rgba(255,190,110,.13),transparent);mix-blend-mode:screen;opacity:0;transition:opacity 1.6s}
+.lit .fx.glow{opacity:1}
+
+/* things in the later scenes */
+.pond .rush path{animation:rush 1s linear infinite}
+@keyframes rush{to{stroke-dashoffset:-106}}
+/* the stream out of the pool: bands of water and flecks of foam racing down it, and foam bobbing where it pours over */
+.race{animation:race .62s linear infinite}
+.race.quick{animation-duration:.4s}
+@keyframes race{to{transform:translateY(96px)}}
+.foam circle{transform-box:fill-box;transform-origin:center;animation:froth .34s ease-in-out infinite alternate}
+@keyframes froth{to{transform:translateY(-6px) scale(1.2)}}
+.spot .wave{opacity:0;transform-box:fill-box;transform-origin:center}
+.spot.play .wave{animation:ripple .9s ease-out}
+.dam .slot{fill:rgba(255,255,255,.3);stroke:#fff;stroke-width:4;stroke-dasharray:9 8;stroke-linecap:round}
+.ripple{fill:none;stroke:#eef9fd;stroke-width:3;transform-box:fill-box;transform-origin:center;animation:ripple 1.8s ease-out infinite}
+@keyframes ripple{from{transform:scale(.25);opacity:.9}to{transform:scale(1.25);opacity:0}}
+.pond .rush,.pond .outflow,.pond .calm{transition:opacity 2.4s}
+.pond .calm,.pond.still .rush,.pond.still .outflow{opacity:0}
+.pond.still .calm{opacity:1}
+/* a thing that stands in the scene is placed by its own transform, so what shakes or tips is the drawing inside it */
+.bush>g,.cup>g{transform-box:fill-box;transform-origin:50% 100%}
+.bush.play>g{animation:shake .6s ease-in-out}
+@keyframes shake{20%{transform:translateX(-7px) rotate(-2deg)}45%{transform:translateX(6px) rotate(2deg)}70%{transform:translateX(-4px)}}
+.choices{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);display:flex;gap:20px}
+.choices b{padding:14px 34px;border-radius:14px;font-size:34px;font-weight:600;cursor:pointer;pointer-events:auto}
+.cup.play>g{animation:ting .5s ease-out}
+@keyframes ting{25%{transform:rotate(7deg)}55%{transform:rotate(-5deg)}80%{transform:rotate(2deg)}}
+/* things in a scene that the song is played on: what to tap next glows */
+.key{pointer-events:auto;cursor:pointer}
+.key.next{animation:nextglow 1s ease-in-out infinite}
+@keyframes nextglow{50%{filter:drop-shadow(0 0 16px #ffd76a) brightness(1.3)}}
+.fire .flames{display:none}
+.fire.lit .flames{display:inline}
+.flame{transform-box:fill-box;transform-origin:50% 100%;animation:flicker .45s ease-in-out infinite alternate}
+.flame+.flame{animation-duration:.33s}
+@keyframes flicker{to{transform:scale(1.1,.88) rotate(4deg)}}
+.shade .seen,.shade.known .dark{display:none}
+.shade.known .seen{display:inline}
+.shade .eyes{animation:blinking 3.4s infinite}
+@keyframes blinking{0%,92%,100%{opacity:1}95%{opacity:0}}
+.trough .water{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(0);transition:transform 1s}
+.trough[data-fill="1"] .water{transform:scaleY(.36)}
+.trough[data-fill="2"] .water{transform:scaleY(.7)}
+.trough[data-fill="3"] .water{transform:scaleY(1)}
+.trough .spill{opacity:0;transition:opacity 1s .8s}
+.trough[data-fill="3"] .spill{opacity:1}
+
+/* the ending: the world draws back into a little window beside the psalm, and looks back at each scene as its line is played */
+#world{transform-origin:100% 50%;transition:transform 1.5s ease-in-out,border-radius 1.5s,opacity .35s}
+#stage.inset{background:#1d1833}
+#stage.inset #world{transform:translateX(calc(var(--s,1)*-64px)) scale(.34);border-radius:calc(var(--s,1)*70px);overflow:hidden;box-shadow:0 0 0 calc(var(--s,1)*26px) var(--cream),calc(var(--s,1)*30px) calc(var(--s,1)*50px) calc(var(--s,1)*90px) rgba(0,0,0,.5)}
+#stage.inset .read{background:none}
+#stage.inset .way{display:none} /* no arrows pointing onward out of the window */
+#stage.inset .page{left:calc(50% - 300px);width:880px;font-size:31px}
+
+#fade{position:absolute;inset:0;background:#17142a;opacity:0;pointer-events:none;transition:opacity .7s}
+#fade.on{opacity:1;pointer-events:auto}
+@keyframes ring{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+
+/* overlays */
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(28,22,48,.68);opacity:0;pointer-events:none;transition:opacity .9s,background 1.2s}
+.overlay.on{opacity:1;pointer-events:auto}
+.title{padding:44px 80px 36px;border-radius:26px;text-align:center;transform:rotate(-1deg)}
+.title h3{margin:0 0 4px;font-size:24px;font-weight:400;letter-spacing:.14em;text-transform:uppercase;opacity:.6}
+.title h1{margin:0;font-size:68px;font-weight:600}
+.title h2{margin:8px 0 26px;font-size:34px;font-weight:400;color:#b65a3c}
+.title p{margin:0;font-size:24px;opacity:.7}
+/* the map of the stories: gray until a story is finished, then it takes its colours; a ring beckons from one that can be played */
+.map{position:relative;flex:none;width:1600px;height:900px}
+.map>svg{position:absolute;left:0;top:0;overflow:visible}
+.map>small{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:15px;color:var(--cream);text-shadow:0 1px 3px rgba(20,40,10,.8)}
+.stop{position:absolute;isolation:isolate;width:190px;margin:-82px 0 0 -95px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.stop svg{width:148px;height:148px;border:8px solid var(--cream);border-radius:50%;box-shadow:4px 7px 0 rgba(60,40,70,.16),8px 16px 24px rgba(40,25,60,.38);filter:grayscale(1) contrast(.8) brightness(1.1);transition:filter 2.6s}
+.stop.done svg{filter:grayscale(0) contrast(1) brightness(1)}
+.stop b{max-width:170px;margin-top:12px;padding:5px 14px;border-radius:10px;font-size:21px;line-height:1.2}
+.stop.open{cursor:pointer}
+.stop.new::before{content:"";position:absolute;z-index:-1;left:50%;top:0;box-sizing:border-box;width:164px;height:164px;margin-left:-82px;border:7px solid #ffe29a;border-radius:50%;animation:beckon 1.8s ease-out infinite}
+@keyframes beckon{from{transform:scale(1);opacity:1}to{transform:scale(1.5);opacity:0}}
+.cue{height:48px;margin:0 0 4px;font-size:38px;color:var(--cream);text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.lyre{height:560px;transition:opacity .7s}
+.overlay:not(.on) .lyre{transition:none}
+.string .hit{stroke:transparent;stroke-width:34;pointer-events:stroke;cursor:pointer}
+.string .vis{stroke:#f7e8c2;stroke-width:5;stroke-linecap:round;pointer-events:none}
+.string.ring .vis{animation:vib .7s ease-out}
+@keyframes vib{0%{stroke:#fff;stroke-width:9;transform:translateX(4px)}25%{transform:translateX(-3px)}50%{transform:translateX(2px)}75%{transform:translateX(-1px)}}
+.string.next .vis{animation:glow 1s ease-in-out infinite}
+@keyframes glow{50%{stroke:#ffd76a;stroke-width:10}}
+.harp{justify-content:flex-start;padding-top:14px;box-sizing:border-box}
+.read{background:rgba(24,18,44,.88)}
+.read .cue,.read .lyre{opacity:0}
+/* The verse is laid out once, at the size it will fill the screen with, and shown small under the harp by scaling:
+   so when it moves up and grows, its lines stay just as they were. */
+.verse{position:absolute;left:50%;top:50%;width:1280px;margin:0;font-size:74px;line-height:1.35;text-wrap:balance;color:var(--cream);text-align:center;text-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-50%,-50%) translateY(318px) scale(.55);transition:transform 1.2s ease-in-out,opacity .5s}
+.read .verse{transform:translate(-50%,-50%)}
+.verse small{display:block;margin-top:26px;font-size:32px}
+.verse.gone{opacity:0}
+/* the last page: the whole psalm */
+.page{width:1360px;font-size:35px;line-height:1.38;text-wrap:pretty}
+.page p{margin:0 0 9px}
+.page h2{margin:0 0 20px;font-size:56px;font-weight:600;color:#ffe29a}
+.page h3{margin:26px 0 0;font-size:46px;font-weight:600;color:#ffe29a;opacity:0;transition:opacity 1.2s}
+.page small{margin-top:8px;font-size:24px}
+.page.done h3{opacity:1}
+.verse>span{opacity:.3;transition:opacity .5s,color .5s}
+.verse .now{opacity:1;color:#ffe29a}
+.verse .got{opacity:1}
+.verse small{opacity:0;transition:opacity 1s}
+.verse.done small{opacity:.8}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- Cut paper: wobbly hand-cut edge, grain, a lit card edge and a soft shadow. -->
+    <filter id="paper" x="-10%" y="-20%" width="120%" height="150%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency=".02" numOctaves="2" seed="4" result="wob"/>
+      <feDisplacementMap in="SourceGraphic" in2="wob" scale="7" xChannelSelector="R" yChannelSelector="G" result="cut"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="4" seed="11" result="grain"/>
+      <feDiffuseLighting in="grain" surfaceScale=".9" diffuseConstant="1.2" lighting-color="#fffaf0" result="lit"><feDistantLight azimuth="235" elevation="55"/></feDiffuseLighting>
+      <feBlend in="cut" in2="lit" mode="multiply"/>
+      <feComposite in2="cut" operator="in" result="tex"/>
+      <feGaussianBlur in="cut" stdDeviation="1.6"/>
+      <feSpecularLighting surfaceScale="4" specularConstant=".6" specularExponent="30" lighting-color="#fff6dd"><feDistantLight azimuth="235" elevation="40"/></feSpecularLighting>
+      <feComposite in2="cut" operator="in" result="edge"/>
+      <feComposite in="tex" in2="edge" operator="arithmetic" k2="1" k3="1" result="card"/>
+      <feGaussianBlur in="cut" stdDeviation="7"/>
+      <feOffset dx="5" dy="9"/>
+      <feColorMatrix values="0 0 0 0 .16  0 0 0 0 .1  0 0 0 0 .22  0 0 0 .45 0" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="card"/></feMerge>
+    </filter>
+    <!-- The same for small pieces: less wobble, tighter shadow. -->
+    <filter id="paperS" x="-25%" y="-25%" width="150%" height="160%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="4" result="wob"/>
+      <feDisplacementMap in="SourceGraphic" in2="wob" scale="3" xChannelSelector="R" yChannelSelector="G" result="cut"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="4" seed="11" result="grain"/>
+      <feDiffuseLighting in="grain" surfaceScale=".9" diffuseConstant="1.2" lighting-color="#fffaf0" result="lit"><feDistantLight azimuth="235" elevation="55"/></feDiffuseLighting>
+      <feBlend in="cut" in2="lit" mode="multiply"/>
+      <feComposite in2="cut" operator="in" result="tex"/>
+      <feGaussianBlur in="cut" stdDeviation="1.1"/>
+      <feSpecularLighting surfaceScale="3.5" specularConstant=".6" specularExponent="30" lighting-color="#fff6dd"><feDistantLight azimuth="235" elevation="40"/></feSpecularLighting>
+      <feComposite in2="cut" operator="in" result="edge"/>
+      <feComposite in="tex" in2="edge" operator="arithmetic" k2="1" k3="1" result="card"/>
+      <feGaussianBlur in="cut" stdDeviation="3"/>
+      <feOffset dx="2.5" dy="4.5"/>
+      <feColorMatrix values="0 0 0 0 .16  0 0 0 0 .1  0 0 0 0 .22  0 0 0 .5 0" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="card"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+<div id="stage"></div>
+<!-- If a file fails to arrive (simple local servers drop one now and then), try the page again, a few times at most. -->
+<script type="module" src="src/main.js" onerror="if ((sessionStorage.tries = (+sessionStorage.tries || 0) + 1) < 4) location.reload()"></script>
+</body>
+</html>

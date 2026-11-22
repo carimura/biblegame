@@ -1,0 +1,11 @@
+# made by `wrangler deploy`
+.site/
+.wrangler/
+
+# working notes: kept on the computer, not published
+PLAN.md
+
+# a place for a recording that must never be published
+sounds/finale.mp3
+
+.DS_Store
