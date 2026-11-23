@@ -1,18 +1,18 @@
 // Scene 6: the valley of the shadow. "Yea, though I walk through the valley of the shadow of death, I will fear no evil;
 // For You are with me; Your rod and Your staff, they comfort me."
 // It is dark, and three frightening shapes stand in the way. Walk up to each with the lamp and it turns out to be nothing to fear.
-// One sheep takes fright and hides: work out which by the names the lamp shows. Then the stars play the next line.
-import { actor, exit, sleep, say, tell, hush, reach, clamp, wonder, lead, walk, apart, hud, html } from './engine.js';
+// One sheep takes fright and runs off out of sight: work out which by the names the lamp shows. Then the stars play the next line.
+import { actor, exit, sleep, say, tell, hush, reach, clamp, lead, walk, apart, hud, html } from './engine.js';
 import { land, come } from './land.js';
 import { hoot, rustle, blip } from './audio.js';
 import { answer, hear } from './harp.js';
-import { cast, SONG, NOTES, chime, baa, post } from './shared.js';
+import { cast, SONG, NOTES, baa, post } from './shared.js';
 
 const W = 3000;
 let sc, field, shades, begun = false, limit = 0;
 
 const eyes = '<g class="eyes" fill="#ffe27a"><ellipse cx="-16" cy="-96" rx="9" ry="7"/><ellipse cx="16" cy="-96" rx="9" ry="7"/></g>';
-// Each shape: where it is, what it looks like in the dark, what the lamp shows it to be, and what David says.
+// Each shape: where it is, what it looks like in the dark, what the lamp shows it to be, and what David says (its note, with a verse, comes up with that).
 const SHAPES = [
   { at: [900, 800], said: 'Only an owl, out hunting mice! Good night, owl.', note: NOTES.owl, sound: hoot,
     dark: `<path d="M-52,0Q-70,-90 -30,-140Q0,-170 34,-140Q72,-88 52,0Z" fill="#17142a"/>${eyes}`,
@@ -32,7 +32,7 @@ export function build(next, back) {
   ({ sc, field } = land({
     W, seed: 61,
     sky: '#241f3d', bands: ['#2c2648', '#352e54', '#3f3760', '#4a416c'], stars: 9,
-    far: ['#4a4563', '#3f3a58'], mid: '#3c4a48', near: '#35443c',
+    far: ['#4a4563', '#3f3a58'], peaks: [260, 170], mid: '#3c4a48', near: '#35443c',
     ground: ['#6a8a5c', '#5f7f52', '#547449', '#496940'], flowers: 30,
     // Cliffs on either hand.
     props: ({ cut, r }) => cut(Array.from({ length: 9 }, (_, i) => { const x = i * 350 - 60 + r() * 60, h = 250 + r() * 130; return `<path d="M${x},626L${x + 30},${626 - h * 0.8}L${x + 110},${626 - h}L${x + 230},${626 - h * 0.86}L${x + 300},626Z" fill="${i % 2 ? '#4f4a5e' : '#5a5568'}"/>`; }).join('')),
@@ -66,15 +66,14 @@ async function story() {
     await reach(shades[i], 230);
     shades[i].classList.add('known');
     shape.sound();
-    tell(shape.said);
-    wonder(shades[i], shape.note, chime(1 + i));
+    await say(`${shape.said}<span class="aside">${shape.note}</span>`);
     limit = i < 2 ? SHAPES[i + 1].at[0] - 150 : W - 40;
   }
-  // At the last shadow one of the ewes took fright and slipped away into the dark.
+  // At the last shadow one of the ewes took fright and ran, right off the edge of the screen.
   const flock = cast.flock, dv = cast.david, gone = flock.filter(s => !s.classList.contains('lamb'))[1], rest = flock.filter(s => s !== gone);
   const name = s => s.dataset.name ?? s.querySelector('.tag text').textContent;
   lead(rest);
-  walk(gone, 2800, 1000, 260).then(() => gone.classList.add('resting'));
+  walk(gone, W + 170, 930, 300);
   await sleep(2600);
 
   await say('Three shadows, and nothing in them to harm us.');
@@ -95,7 +94,6 @@ async function story() {
   rest.forEach(s => s.classList.remove('named'));
   tell(`Yes, ${name(gone)}! Call her. ${name(gone)}!`);
   await sleep(1400);
-  gone.classList.remove('resting');
   baa(gone);
   await walk(gone, dv.pos[0] + 90, dv.pos[1] + 16, 230);
   baa(gone, true);
@@ -107,7 +105,7 @@ async function story() {
   await say('Look up! The stars are out, even over this valley. They are playing the next part of my song. Tap them to play it back.');
   hush();
   const sky = sc.layers[0][0];
-  sky.insertAdjacentHTML('beforeend', [0, 1, 2, 3, 4].map(i => `<g transform="translate(${420 + i * 190},${[120, 172, 196, 172, 120][i]})"><path class="tw" d="M0,-34Q5,-5 34,0Q5,5 0,34Q-5,5 -34,0Q-5,-5 0,-34Z" fill="#fdf1cf"/><circle r="52" fill="transparent"/></g>`).join(''));
+  sky.insertAdjacentHTML('beforeend', [0, 1, 2, 3, 4].map(i => `<g transform="translate(${420 + i * 190},${[120, 172, 196, 172, 120][i]})"><path class="tw" d="M0,-44Q6,-6 44,0Q6,6 0,44Q-6,6 -44,0Q-6,-6 0,-44Z" fill="#fdf1cf"/><circle r="92" fill="transparent"/></g>`).join(''));
   const stars = [...sky.children].slice(-5);
   await answer(stars.map((el, string) => ({ el, string })), SONG[4].pieces.slice(0, 2).map(p => p[1]));
   for (const el of stars) el.remove();

@@ -1,6 +1,6 @@
 // The lie of the land. Scenes 3 onward are each built from a short description of their place,
 // and share the same comings and goings.
-import { scene, show, layer, plane, fx, clamp, control, arrive, lead, walk, sleep } from './engine.js';
+import { scene, show, layer, plane, fx, clamp, control, arrive, lead, walk, sleep, IN } from './engine.js';
 import { rnd, cut, hills, olive, grasses, tufts } from './art.js';
 import { music } from './audio.js';
 import { cast, wonders } from './shared.js';
@@ -20,7 +20,10 @@ export function aloft(clouds, birds) {
 // stars: how many; clouds: their colour; far, ground: lists of colours, back to front; dark: a colour laid over
 // everything for night, with a pool of light where the scene says; props, under, front: drawings for the ground,
 // for a layer of their own beneath the actors (anything that moves), and for one in front of them.
-export function land({ W, seed, sky, bands, sun, moon, stars = 0, clouds, far, haze, mid, near, ground, flowers = 200, trees = [], props = () => '', under = () => '', front = () => '', dark }) {
+// So that no two places have the same skyline: peaks: [how high, how far apart] makes the furthest range mountains
+// instead of rolling hills, capped with `snow` if that colour is given; back: drawings that stand behind the
+// middle hills (a lake, a village, great rocks).
+export function land({ W, seed, sky, bands, sun, moon, stars = 0, clouds, far, peaks, snow, back = () => '', haze, mid, near, ground, flowers = 200, trees = [], props = () => '', under = () => '', front = () => '', dark }) {
   const sc = scene(W, 0.8, 30), r = rnd(seed);
   const band = (y, amp, fill) => cut(`<path d="${hills(2000, y, amp, 300, r)}" fill="${fill}"/>`);
   const kit = {
@@ -28,6 +31,8 @@ export function land({ W, seed, sky, bands, sun, moon, stars = 0, clouds, far, h
     cut,
     tree: (x, y, s) => `<g class="tree" transform="translate(${x},${y})">${olive(r, s)}</g>`,
     rock: (x, y, s, fill = '#b9ad9c') => `<path transform="translate(${x},${y}) scale(${s})" d="M-30,0q-6,-22 12,-30q22,-10 36,6q12,12 6,24z" fill="${fill}"/>`,
+    cypress: (x, y, h, fill = '#5b7560') => `<path d="M${x},${y}q${-h * 0.2},${-h * 0.45} 0,${-h}q${h * 0.2},${h * 0.55} 0,${h}z" fill="${fill}"/>`,
+    house: (x, y, w, h, fill) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${fill}"/><rect x="${x + w * 0.4}" y="${y + 9}" width="7" height="11" rx="2" fill="#8a7a86"/>`,
   };
 
   layer(0,
@@ -40,9 +45,12 @@ export function land({ W, seed, sky, bands, sun, moon, stars = 0, clouds, far, h
     band(372, 24, bands[3]));
   aloft(clouds && [[240, 160, 1], [760, 108, 0.75], [1320, 268, 0.9], [560, 276, 0.6], [1740, 150, 0.7]].map(([x, y, s]) => `<path transform="translate(${x},${y}) scale(${s})" d="${CLOUD}" fill="${clouds}"/>`).join(''), sun);
 
-  layer(0.12, cut(`<path d="${hills(2300, 404, 54, 320, r)}" fill="${far[0]}"/>`) + cut(`<path d="${hills(2300, 432, 40, 250, r)}" fill="${far[1]}"/>`), 'far');
+  // The mountains are drawn twice from the same numbers when they have snow: once white, then again lower and
+  // flatter in their own colour, which leaves the white showing deepest on the peaks.
+  const rolling = hills(2300, 404, 54, 320, r), range = (y, amp, fill) => cut(`<path d="${hills(2300, y, amp, peaks[1], rnd(seed), 900, true)}" fill="${fill}"/>`);
+  layer(0.12, (peaks ? (snow ? range(380, peaks[0], snow) + range(380 + peaks[0] * 0.24, peaks[0] * 0.55, far[0]) : range(380, peaks[0], far[0])) : cut(`<path d="${rolling}" fill="${far[0]}"/>`)) + cut(`<path d="${hills(2300, 432, 40, 250, r)}" fill="${far[1]}"/>`), 'far');
   if (haze) fx(`background:linear-gradient(transparent 30%,${haze} 48%,transparent 66%)`);
-  layer(0.3, cut(`<path d="${hills(2400, 560, 44, 330, r)}" fill="${mid}"/>`), 'mid', -84);
+  layer(0.3, back(kit) + cut(`<path d="${hills(2400, 560, 44, 330, r)}" fill="${mid}"/>`), 'mid', -84);
   layer(0.6, kit.tree(520 + r() * 300, 574, 0.4) + kit.tree(1500 + r() * 300, 568, 0.36) + cut(`<path d="${hills(2500, 568, 36, 400, r)}" fill="${near}"/>`), '', -80);
 
   const dots = Array.from({ length: flowers }, () => {
@@ -75,7 +83,7 @@ export function come(sc, field, find, side, song) {
   music(song);
   field.append(cast.david, ...cast.flock);
   control(cast.david, find);
-  arrive(side === 'right' ? sc.W - 220 : 220, 780);
+  arrive(side === 'right' ? sc.W - IN : IN, 780);
   lead(cast.flock, side === 'right' ? 1 : -1);
 }
 

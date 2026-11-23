@@ -11,20 +11,21 @@ export const rnd = a => () => {
 // Wrap shapes so they read as one piece of cut paper.
 export const cut = (inner, small) => `<g filter="url(#paper${small ? 'S' : ''})">${inner}</g>`;
 
-// A rolling ridge through the given points, filled down to `bottom`.
-export function ridge(pts, bottom = 900) {
+// A rolling ridge through the given points, filled down to `bottom`. With `sharp` it runs straight from point to
+// point instead: crags and mountains.
+export function ridge(pts, bottom = 900, sharp) {
   let d = `M${pts[0][0]},${bottom}L${pts[0]}`;
   for (let i = 1; i < pts.length; i++) {
     const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], m = (x0 + x1) / 2;
-    d += `C${m},${y0} ${m},${y1} ${x1},${y1}`;
+    d += sharp ? `L${x1},${y1}` : `C${m},${y0} ${m},${y1} ${x1},${y1}`;
   }
   return d + `L${pts.at(-1)[0]},${bottom}Z`;
 }
 
-export function hills(w, y, amp, step, r, bottom) {
+export function hills(w, y, amp, step, r, bottom, sharp) {
   const pts = [];
   for (let x = -60; x < w + 60 + step; x += step * (0.7 + r() * 0.6)) pts.push([x | 0, (y + (r() - 0.5) * amp) | 0]);
-  return ridge(pts, bottom);
+  return ridge(pts, bottom, sharp);
 }
 
 const STONE = ['#ddcfb6', '#cbb89b', '#bfa98a', '#e8dcc6', '#d3c0a0'];
@@ -42,6 +43,9 @@ export function wall(x, y, w, h, r) {
   }
   return `<rect x="${x - 3}" y="${y + 5}" width="${w + 6}" height="${h - 5}" rx="9" fill="#8f7c68"/>` + cut(s, 1);
 }
+
+// A wooden gate, 122 wide and 116 high, hinged on its left.
+export const WICKET = `${cut('<rect x="2" width="10" height="116" rx="3" fill="#8a6445"/><rect x="110" width="10" height="116" rx="3" fill="#8a6445"/><path d="M6,104L116,14" stroke="#94704c" stroke-width="8"/><rect y="12" width="122" height="10" rx="3" fill="#a67c55"/><rect y="52" width="122" height="10" rx="3" fill="#a67c55"/><rect y="92" width="122" height="10" rx="3" fill="#a67c55"/>', 1)}<rect width="122" height="116" fill="transparent"/>`;
 
 export function olive(r, s = 1) {
   const blobs = (n, fill, dy) =>

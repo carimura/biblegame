@@ -4,7 +4,27 @@ import { step as footfall, tick as page } from './audio.js';
 const NS = 'http://www.w3.org/2000/svg';
 
 export const stage = document.getElementById('stage');
-export const sleep = ms => new Promise(r => setTimeout(r, ms));
+// The game keeps its own clock, which stops while the game is paused (the Esc key): whatever waits or moves by it
+// stops too, and goes on from where it was.
+let paused, since, lost = 0, resume; // while paused: a promise that it is over, and when it began; `lost` is all the time spent paused
+const clock = () => (paused ? since : performance.now()) - lost;
+export function pause(on) {
+  if (on === !!paused) return;
+  if (on) [since, paused] = [performance.now(), new Promise(r => (resume = r))];
+  else {
+    lost += performance.now() - since;
+    paused = null;
+    resume();
+  }
+  stage.classList.toggle('paused', on);
+}
+export const sleep = async ms => {
+  const end = clock() + ms;
+  do {
+    await new Promise(r => setTimeout(r, end - clock()));
+    await paused; // if the game is paused the wait stops here, and afterwards runs for whatever was left of it
+  } while (end - clock() > 4);
+};
 export const click = el => new Promise(r => el.addEventListener('pointerdown', r, { once: true }));
 // Like click, but the click stops there: it does not also send the hero walking.
 export const tap = el => new Promise(r => el.addEventListener('pointerdown', e => (e.stopPropagation(), r()), { once: true }));
@@ -30,7 +50,7 @@ const way = { left: hud.querySelector('.way.left'), right: hud.querySelector('.w
 // Each scene is drawn for a view of 1600x900. Its layers are resized to the window (not zoomed), so nothing inside
 // them shifts. A window wider than that shows more of the scene to either side (`VW`, up to 2000), and a taller one
 // more sky above (`VH`, up to 1040), so an ordinary screen is filled to its edges instead of barred with black.
-let active, building, scale = 1, VW = 1600, VH = 900;
+let active, building, fading, scale = 1, VW = 1600, VH = 900;
 function pan() {
   for (const [el, f] of active.layers) el.style.transform = `translate3d(${-active.cam * f * scale}px,0,0)`;
 }
@@ -68,11 +88,10 @@ export function scene(W, zoom = 1, lift = 0) {
 export function show(sc) {
   if (active) {
     active.leave?.(); // a scene may have something to stop as it goes: running water, a fire
-    active.el.hidden = true;
+    if (active !== fading) active.el.hidden = true;
   }
   active = sc;
   sc.el.hidden = false;
-  for (const side in way) way[side].classList.toggle('on', !!sc.arrows[side]);
   fit();
 }
 
@@ -105,12 +124,22 @@ export function overlay(inner) {
 
 // For the ending the world is shown small, in a window beside the words (`#stage.inset` in index.html).
 export const inset = () => stage.classList.add('inset');
-// Change what the world shows, behind a quick fade of it.
+// Change what the world shows (`change` shows another scene), the old picture fading away over the new one. The hero
+// and the flock go to the new scene at once, so stand-ins are left where they stood for as long as the fade takes.
 export async function dissolve(change) {
-  world.style.opacity = 0;
-  await sleep(350);
+  const old = (fading = active), twins = [...old.el.querySelectorAll('.david,.sheep')].filter(a => !a.parentNode.closest('.david')).map(a => a.parentNode.insertBefore(a.cloneNode(true), a));
+  for (const t of twins) t.classList.remove('walk');
   change();
-  world.style.opacity = 1;
+  fading = null;
+  const look = old.el.style; // (set one by one: the scene keeps other things here, such as where its lamp is)
+  look.zIndex = 1;
+  look.transition = 'opacity 1.3s ease-in-out';
+  old.el.getBoundingClientRect();
+  look.opacity = 0;
+  await sleep(1300);
+  if (active !== old) old.el.hidden = true;
+  look.zIndex = look.transition = look.opacity = '';
+  for (const t of twins) t.remove();
 }
 
 export async function fade(dark) {
@@ -140,9 +169,9 @@ export function place(g, x, y) {
 // Run `step(0..1)` every frame for `ms`.
 export function tween(ms, step, ease = t => t) {
   return new Promise(done => {
-    const t0 = performance.now();
+    const t0 = clock();
     (function frame() {
-      const t = ms ? Math.min(1, (performance.now() - t0) / ms) : 1;
+      const t = ms ? Math.min(1, (clock() - t0) / ms) : 1;
       step(ease(t));
       t < 1 ? requestAnimationFrame(frame) : done();
     })();
@@ -193,16 +222,22 @@ export function arrive(x, y) {
   active.cam = clamp(x * active.zoom - VW / 2, 0, camMax());
 }
 
-// A way off the edge of the scene: walking the hero off that side calls `fn`. `arrow` says whether to point it out.
+// A way off the edge of the scene: walking the hero to within `EDGE` of that side calls `fn`. `arrow` says whether
+// to point it out. (He arrives in a scene well clear of that, `IN` from its edge.)
+const EDGE = 160;
+export const IN = 330;
 export function exit(sc, side, fn, arrow = true) {
   sc.exits[side] = fn;
   sc.arrows[side] = arrow;
-  if (sc === active) way[side].classList.toggle('on', arrow);
 }
+// Things ringed for the player to find (see `hint`). An arrow also shows on a side of the screen that has one out of
+// sight beyond it, and a click on that arrow walks the hero to it.
+const hints = new Set();
+const beyond = side => [...hints].find(h => active.el.contains(h) && (side === 'left' ? h.at * active.zoom < active.cam + 40 : h.at * active.zoom > active.cam + VW - 40));
 for (const side in way)
   way[side].addEventListener('pointerdown', e => {
     e.stopPropagation();
-    if (free()) go(finder(side === 'right' ? active.W : 0, hero.pos[1]));
+    if (free()) go(finder(beyond(side)?.at ?? (side === 'right' ? active.W : 0), hero.pos[1]));
   });
 
 stage.addEventListener('pointerdown', e => {
@@ -271,7 +306,7 @@ let last = performance.now();
 (function tick(now) {
   const dt = Math.min(50, now - last) / 1000;
   last = now;
-  if (hero && active) {
+  if (hero && active && !paused) {
     // Walk the route.
     for (let step = SPEED * dt; route.length && step > 0; ) {
       const [x, y, then] = route[0], dx = x - hero.pos[0], dy = y - hero.pos[1], d = Math.hypot(dx, dy);
@@ -320,8 +355,9 @@ let last = performance.now();
     active.cam += (want - active.cam) * Math.min(1, dt * 3.5);
     pan();
     if (bubble.classList.contains('on')) aim();
+    for (const side in way) way[side].classList.toggle('on', !!(active.arrows[side] || beyond(side)));
 
-    const { left, right } = active.exits, off = right && hero.pos[0] >= active.W - 60 ? right : left && hero.pos[0] <= 60 ? left : null;
+    const { left, right } = active.exits, off = right && hero.pos[0] >= active.W - EDGE ? right : left && hero.pos[0] <= EDGE ? left : null;
     // A scene may keep one spot lit (a fire, a lamp): tell its glow where that is on screen.
     if (active.light) {
       const [x, y] = active.light();
@@ -364,17 +400,19 @@ export async function say(text) {
   await sleep(350);
 }
 
-// A soft pulsing ring drawn in a layer, shown after `delay`. Returns a function that removes it.
+// A soft pulsing ring drawn in a layer of the ground, shown after `delay`. Returns a function that removes it.
 export function hint(parent, x, y, delay = 0) {
   const ring = document.createElementNS(NS, 'circle');
   ring.setAttribute('class', 'beacon');
   ring.setAttribute('cx', x);
   ring.setAttribute('cy', y);
   ring.setAttribute('r', 46);
-  const t = setTimeout(() => parent.append(ring), delay);
+  ring.at = x;
+  const t = setTimeout(() => (parent.append(ring), hints.add(ring)), delay);
   return () => {
     clearTimeout(t);
     ring.remove();
+    hints.delete(ring);
   };
 }
 

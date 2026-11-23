@@ -1,5 +1,5 @@
 // Sound: a recorded harp, a few recorded effects, and quiet sustained chords and other effects that are synthesised.
-let ctx, bus, sfx, pad, bed, held, noise, ready, grand;
+let ctx, out, bus, sfx, pad, bed, mix, held, noise, ready, grand;
 
 // The harp's seven strings, low to high (D major pentatonic).
 export const STRINGS = [220, 293.66, 329.63, 369.99, 440, 493.88, 587.33];
@@ -13,7 +13,8 @@ export function start() {
   limit.ratio.value = 12;
   limit.attack.value = 0.003;
   limit.release.value = 0.15;
-  limit.connect(ctx.destination);
+  out = ctx.createGain(); // everything goes out through here, so that a pause can silence it all
+  limit.connect(out).connect(ctx.destination);
   bus = ctx.createGain();
   bus.connect(limit);
   sfx = ctx.createGain(); // steps, knocks, bleats: turned well up so they carry over the music
@@ -38,7 +39,8 @@ export function start() {
   const lfo = ctx.createOscillator(), depth = ctx.createGain();
   bed = ctx.createGain();
   bed.gain.value = 0.014; // a quiet bed: measured, anything louder drowns the steps and bleats
-  bed.connect(bus);
+  mix = ctx.createGain(); // how loud this place's music is, and where it is turned down while the song is being played
+  bed.connect(mix).connect(bus);
   pad = ctx.createBiquadFilter();
   pad.type = 'lowpass';
   pad.frequency.value = 700;
@@ -129,6 +131,19 @@ export function splash() {
 }
 // A tongue lapping, or a drop falling.
 export const lap = () => ctx && puff(0.05, 1900 + Math.random() * 500, 0.3, 'bandpass', 4);
+// A drop falling into still water, at a pitch: a short pure note that slides quickly up to it.
+export function drip(freq) {
+  if (!ctx) return;
+  const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+  o.frequency.setValueAtTime(freq * 0.5, t);
+  o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.3, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+  o.connect(g).connect(bus);
+  o.start(t);
+  o.stop(t + 0.28);
+}
 // Leaves and thorns stirred.
 export const rustle = () => ctx && puff(0.35, 2800, 0.3, 'highpass');
 // A small bird: three quick notes, each sliding upward.
@@ -196,9 +211,24 @@ export async function anthem(from = 0) {
   held = () => {};
   const src = ctx.createBufferSource();
   src.buffer = buf;
-  src.connect(ctx.destination);
+  src.connect(out);
   src.start(0, from);
   return (buf.duration - from) * 1000;
+}
+
+// Light breaking: a bright chord that opens out from its lowest note and slowly fades.
+export function shine() {
+  if (!ctx) return;
+  [293.66, 440, 587.33, 739.99, 880, 1174.66].forEach((f, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + i * 0.09;
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.08, t + 0.5);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 5);
+    o.connect(g).connect(bus);
+    o.start(t);
+    o.stop(t + 5.1);
+  });
 }
 
 // A run of harp notes, rising: setting out.
@@ -257,14 +287,27 @@ const CHORD = {
   C: [65.41, 130.81, 196, 261.63, 329.63, 392],
   Em: [82.41, 123.47, 164.81, 246.94, 329.63, 392],
   Am: [110, 164.81, 220, 261.63, 329.63, 440],
+  F: [87.31, 130.81, 174.61, 261.63, 349.23, 440],
+  Dm: [73.42, 146.83, 220, 293.66, 349.23],
+  B: [123.47, 185, 246.94, 311.13, 369.99],
 };
 // Fade a chord in over `rise` seconds. Returns a function that fades it out again over however many it is given.
-// `oct` moves the whole chord up or down by octaves; `wave` is the voice it is played in.
-function chord(name, rise = 4, oct = 1, wave = 'triangle') {
+// `oct` moves the whole chord up or down by octaves; `wave` is the voice it is played in; `throb` makes it tremble
+// that many times a second, like bowed strings.
+function chord(name, rise = 4, oct = 1, wave = 'triangle', throb) {
   const g = ctx.createGain(), t = ctx.currentTime, level = { sawtooth: 0.7, sine: 0.6 }[wave] ?? 1; // evened out by measuring: these two voices come out louder
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(level, t + rise);
-  g.connect(pad);
+  const out = throb ? ctx.createGain() : g, shake = throb && ctx.createOscillator();
+  if (throb) {
+    const depth = ctx.createGain();
+    shake.frequency.value = throb;
+    depth.gain.value = 0.4;
+    shake.connect(depth).connect(out.gain);
+    shake.start();
+    g.connect(out);
+  }
+  out.connect(pad);
   const oscs = CHORD[name].flatMap(f =>
     [-4, 4].map(detune => {
       const o = ctx.createOscillator();
@@ -281,8 +324,20 @@ function chord(name, rise = 4, oct = 1, wave = 'triangle') {
     g.gain.cancelScheduledValues(t);
     g.gain.setValueAtTime(g.gain.value, t);
     g.gain.linearRampToValueAtTime(0, t + fall);
-    oscs.forEach(o => o.stop(t + fall + 0.1));
+    oscs.concat(shake || []).forEach(o => o.stop(t + fall + 0.1));
   };
+}
+// A low, soft drum.
+function thud() {
+  const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+  o.frequency.setValueAtTime(120, t);
+  o.frequency.exponentialRampToValueAtTime(48, t + 0.25);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.1, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+  o.connect(g).connect(bus);
+  o.start(t);
+  o.stop(t + 0.75);
 }
 
 // How a line of the song comes home: under its last note (always the D string) the strings above it are rolled
@@ -295,28 +350,37 @@ export function strum(full) {
 // Each place has its own music, made to sound unlike its neighbours so that arriving somewhere is heard as well as
 // seen: its own chords and pace, how bright or muffled it is (`tone`), how high it sits (`oct`), the voice it is
 // played in (`wave`), and for some a lilt of harp notes over the top (`lilt`: which notes of the chord, in what
-// order, -1 for a rest; `every`: how many to a bar). Until the first call the music just sits on its opening chord.
+// order, -1 for a rest; `every`: how many to a bar). The valley is the tense one: louder (`level`), its strings
+// trembling (`throb`), a slow drum under it (`pulse`: beats to a bar). Until the first call the music just sits on
+// its opening chord.
 const SONGS = {
   fold: { loop: ['G', 'D', 'A', 'Bm', 'G', 'A', 'D', 'D'], bar: 7000, tone: 700 },
   pastures: { loop: ['G', 'C', 'G', 'D', 'Em', 'C', 'D', 'G'], bar: 6000, tone: 1400, lilt: [0, 2, 1, 3], every: 8 }, // bright, a rising lilt
   waters: { loop: ['D', 'G', 'D', 'A', 'Bm', 'G', 'A', 'D'], bar: 6000, tone: 1000, oct: 2, wave: 'sine', lilt: [0, 1, 2, 3, 2, 1], every: 12 }, // high and clear, rippling
   lost: { loop: ['Em', 'C', 'G', 'D', 'Em', 'C', 'D', 'Em'], bar: 7000, tone: 420, lilt: [3, -1, -1, 1, -1, -1], every: 6 }, // low and searching: a few lone notes
   night: { loop: ['G', 'Em', 'C', 'D'], bar: 9000, tone: 520, wave: 'sine', lilt: [3, -1, -1, -1], every: 2 }, // slow and still, a high note now and then
-  valley: { loop: ['Em', 'Bm', 'C', 'Em', 'Am', 'Em', 'Bm', 'Em'], bar: 8000, tone: 420, wave: 'sawtooth' }, // dark, low strings, nothing over the top
+  valley: { loop: ['Em', 'F', 'Em', 'Dm', 'Em', 'C', 'B', 'Em'], bar: 6000, tone: 620, wave: 'sawtooth', level: 1.8, throb: 5.5, pulse: 3, lilt: [3, -1, -1, 1, -1, 2, -1, -1], every: 4 }, // dark and uneasy: trembling low strings that keep slipping a half-step, a slow drum, a lone high note now and then
   table: { loop: ['G', 'D', 'Em', 'C', 'G', 'C', 'D', 'G'], bar: 5000, tone: 1500, lilt: [0, 3, 1, 3, 2, 3], every: 6 }, // sunny and quick, rocking
   home: { loop: ['D', 'A', 'Bm', 'G', 'D', 'G', 'A', 'D'], bar: 7500, tone: 1100, wave: 'sawtooth', lilt: [0, 1, 2, 3, 2, 1, 0, -1], every: 8 }, // warm strings, the fullest
+  // Creation: its music is made as the world is.
+  void: { loop: ['Dm'], bar: 12000, tone: 300, oct: 0.5, level: 3 }, // before light: one low chord that never moves
+  light: { loop: ['D', 'A', 'Bm', 'G', 'D', 'G', 'A', 'D'], bar: 6500, tone: 1700, oct: 2, wave: 'sine', lilt: [0, 2, 3, 2, 1, 3], every: 6 }, // the first day: high and bright
+  sky: { loop: ['G', 'D', 'Em', 'C', 'G', 'C', 'D', 'G'], bar: 7000, tone: 1300, oct: 2, lilt: [3, -1, 2, -1, 3, 1, -1, -1], every: 8 }, // the second: wide and airy
 };
-let song, barTimer, liltTimer, quieted = false;
+let song, barTimer, liltTimer, pulseTimer, quieted = false, loud = 1;
 export function music(name) {
   if (!ctx || grand || song === name) return;
   song = name;
   clearInterval(barTimer);
   clearInterval(liltTimer);
-  const { loop, bar, tone, oct = 1, wave, lilt, every } = SONGS[name];
+  clearInterval(pulseTimer);
+  const { loop, bar, tone, oct = 1, wave, lilt, every, level = 1, throb, pulse } = SONGS[name];
+  loud = level;
+  quiet(quieted);
   let i = 0, k = 0, now, first = true;
   const next = () => {
     held(first ? 1.2 : 5); // coming into a place the old music clears quickly, so the new is heard arriving
-    held = chord((now = loop[i++ % loop.length]), first ? 2 : 4, oct, wave);
+    held = chord((now = loop[i++ % loop.length]), first ? 2 : 4, oct, wave, throb);
     first = false;
   };
   pad.frequency.setTargetAtTime(tone, ctx.currentTime, 0.4);
@@ -328,15 +392,23 @@ export function music(name) {
       const n = lilt[k++ % lilt.length];
       if (!quieted && n >= 0) pluck(CHORD[now][2 + (n % (CHORD[now].length - 2))] * 2, 0.11);
     }, bar / every);
+  if (pulse) pulseTimer = setInterval(() => quieted || thud(), bar / pulse);
 }
 // The ending: under the whole psalm the chords come up to three times as loud, and brighter. From then on the music
 // stays as it is whatever scene is shown (the ending looks back at them all), and steps and bleats make no sound.
 export function swell() {
   const t = ctx.currentTime;
   grand = true;
+  mix.gain.setTargetAtTime(1, t, 1.5);
   bed.gain.setTargetAtTime(0.042, t, 1.5);
   pad.frequency.setTargetAtTime(1900, t, 1.5);
   sfx.gain.setTargetAtTime(0, t, 0.2);
 }
-// The lilt steps aside while the harp is being taught.
-export const quiet = on => (quieted = on);
+// Silence while the game is paused. (Sound goes on being made underneath: only the way out is shut.)
+export const mute = on => ctx && out.gain.setTargetAtTime(on ? 0 : 1, ctx.currentTime, 0.05);
+// While the song is being taught, or played on something, the music drops well back so the notes are heard alone:
+// the lilt and the drum stop, and the chords fall to a fifth of their loudness.
+export function quiet(on) {
+  quieted = on;
+  if (ctx && !grand) mix.gain.setTargetAtTime(on ? loud * 0.2 : loud, ctx.currentTime, 0.4);
+}

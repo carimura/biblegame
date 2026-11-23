@@ -7,9 +7,9 @@ No timers, no scores, nothing to lose. No ads, no accounts, and nothing is colle
 
 **Play it:** https://play.awakenusa.com (on a computer, with a mouse)
 
-It is the first of eight stories on the game's map. The other seven are places kept for stories not yet made:
-Creation, Noah's Ark, Moses and the Sea, David and Goliath, The Birth of Jesus, The Miracles of Jesus and
-The Resurrection.
+It is the first of eight stories on the game's map. The second, Creation, is being made: its first two days can be
+played once The Shepherd's Song has been finished (the map opens it then), and its puzzles ask a little more. The other six are places kept for stories not yet made: Noah's Ark, Moses
+and the Sea, David and Goliath, The Birth of Jesus, The Miracles of Jesus and The Resurrection.
 
 ## Run it
 
@@ -19,7 +19,8 @@ Plain HTML, CSS and JavaScript modules. There is no build step and nothing to in
 python3 -m http.server --protocol HTTP/1.1
 ```
 
-Then open http://localhost:8000. Adding a scene's number to the address (`#5`) starts at that scene.
+Then open http://localhost:8000. Adding a scene's number to the address (`#5`) starts at that scene of The Shepherd's
+Song, and `#day2` at that day of Creation.
 
 ## Where things are
 
@@ -27,6 +28,7 @@ Then open http://localhost:8000. Adding a scene's number to the address (`#5`) s
 - `src/engine.js`: what every scene shares (walking, the camera, the flock that follows, speech, notes).
 - `src/scene1.js` to `src/scene8.js`: the eight scenes. `src/land.js` builds the scenery for scenes 3 to 8.
 - `src/harp.js`, `src/audio.js`: the song and every sound. `src/shared.js`: the melody and the note cards.
+- `src/theatre.js`, `src/day1.js`, `src/day2.js`: Creation. One paper picture that every day adds to, and its days.
 - `src/map.js`: the map of the stories.
 - `sounds/`: the recorded sounds.
 

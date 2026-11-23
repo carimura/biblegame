@@ -1,6 +1,6 @@
 // Scene 1: the sheepfold at dawn. "The LORD is my shepherd; I shall not want."
-import { scene, show, layer, plane, fx, actor, glide, walk, smooth, clamp, say, tell, hush, speaker, hint, wonder, sleep, tap, when, control, roam, free, still, go, spot, arrive, lead, exit } from './engine.js';
-import { rnd, cut, ridge, hills, wall, olive, grasses, tufts, sheep, david } from './art.js';
+import { scene, show, layer, plane, fx, actor, glide, walk, smooth, clamp, say, tell, hush, speaker, hint, wonder, sleep, tap, when, control, roam, free, still, go, spot, arrive, lead, exit, IN } from './engine.js';
+import { rnd, cut, ridge, hills, wall, WICKET, olive, grasses, tufts, sheep, david } from './art.js';
 import { pluck, blip, creak, music, STRINGS } from './audio.js';
 import { teach } from './harp.js';
 import { cast, SONG, line, baa, counter, wonders } from './shared.js';
@@ -23,8 +23,8 @@ let limit = 1950; // how far right David may walk; the land opens up once the so
 
 // ---- Where David may walk ----
 // Outside he has the ground in front of the fold and to its right. The fold itself is a block he must go round,
-// and its only way in is the gate: down to the gateway, then through.
-const CORNER = [954, 716], GATEWAY = [868, 724], THRESHOLD = [838, 656];
+// and its only way in is the gate: down to the gateway, then through. (`CORNER` is just clear of its right-hand end wall.)
+const CORNER = [990, 716], GATEWAY = [868, 724], THRESHOLD = [838, 656];
 const isIn = () => dv.parentNode === inside;
 const nearGate = () => !isIn() && Math.hypot(dv.pos[0] - 915, dv.pos[1] - 716) < 110;
 
@@ -110,10 +110,11 @@ export function build(onward) {
   lamb = actor(inside, 'sheep lamb', sheep('Pip', 0.66), PIP[0], PIP[1]);
   actor(inside, '', cut('<path d="M172,660Q186,578 250,554Q302,544 326,586Q342,622 340,660Z" fill="#dcbd68"/><path d="M205,640q10,-40 40,-62M250,646q4,-44 22,-70M292,644q-2,-30 12,-50" fill="none" stroke="#c4a34e" stroke-width="4" stroke-linecap="round"/>', 1), 0, 0);
 
-  // The front wall, with the gate in it.
+  // The front wall, with the gate in it, and the two end walls (seen end-on), which close the fold at its sides.
+  // (The end walls have numbers of their own, so that adding them changed nothing drawn after them.)
   const front = plane(
-    wall(150, 602, 594, 96, r) + wall(742, 548, 36, 150, r) + wall(900, 548, 36, 150, r) +
-    `<g transform="translate(778,575)"><g id="gate">${cut('<rect x="2" width="10" height="116" rx="3" fill="#8a6445"/><rect x="110" width="10" height="116" rx="3" fill="#8a6445"/><path d="M6,104L116,14" stroke="#94704c" stroke-width="8"/><rect y="12" width="122" height="10" rx="3" fill="#a67c55"/><rect y="52" width="122" height="10" rx="3" fill="#a67c55"/><rect y="92" width="122" height="10" rx="3" fill="#a67c55"/>', 1)}<rect width="122" height="116" fill="transparent"/></g></g>`);
+    wall(150, 602, 594, 96, r) + wall(742, 548, 36, 150, r) + wall(900, 548, 36, 150, r) + wall(132, 478, 40, 222, rnd(12)) + wall(934, 478, 40, 222, rnd(13)) +
+    `<g transform="translate(778,575)"><g id="gate">${WICKET}</g></g>`);
   gate = front.querySelector('#gate');
 
   // Outside the fold, in front of the wall.
@@ -168,7 +169,7 @@ export function enter() {
   music('fold');
   outside.append(dv, ...cast.flock);
   control(dv, toOutside);
-  arrive(W - 220, 780);
+  arrive(W - IN, 780);
   lead(cast.flock, 1);
 }
 
@@ -198,19 +199,23 @@ export async function play() {
   await say('Good morning! I’m David. I look after my father’s sheep.');
   await say('Today I am taking them over the hills, to good grass and water. Will you come and help me look after them?');
   await say('As we walk I’ll teach you a song I am making. It is about the Lord, who looks after me just as I look after them.');
+  await say('My sheep are still asleep in their pen. Our first job is to bring them out!');
 
   roam(true);
-  tell('First, let’s wake the flock. Click where you want me to walk. Let’s go to the gate!');
+  tell('Click where you want me to walk. Let’s go to the gate.');
+  let stop = hint(outside, 839, 633, 6000);
   await when(nearGate);
-  tell('Here we are! Now open the gate.');
-  let stop = hint(outside, 839, 633);
+  stop();
+  tell('Here we are! Click the gate to open it.');
+  stop = hint(outside, 839, 633);
   await when(() => opened);
   stop();
   await sleep(1200);
-  tell('Now call them out! A shepherd knows every sheep by name.');
+  tell('Now wake them and call them out of the pen. Click each sleeping sheep!');
   await Promise.all(flock.map((s, i) => {
     s.classList.add('live');
-    return tap(s).then(() => call(s, i));
+    const unring = hint(outside, s.pos[0], s.pos[1] - 40, 1500); // a ring on each one still to be called
+    return tap(s).then(() => (unring(), call(s, i)));
   }));
 
   tell('One, two, three, four… One is missing! Where is little Pip? Let’s look inside the pen.');
@@ -222,7 +227,7 @@ export async function play() {
   baa(lamb, true);
   await glide(lamb, 262, 552, 260, smooth);
   lamb.classList.add('named', 'live');
-  tell('There she is! Call little Pip.');
+  tell('There she is, behind the hay! Click her to call her out.');
   stop = hint(outside, 285, 522, 6000);
   await tap(lamb);
   stop();
@@ -236,6 +241,9 @@ export async function play() {
   await leave(lamb, PIP[2], PIP[3]);
 
   await say('Five! Every one is here. Not one is lost.');
+  // (Said here, with the first job done and nothing pressing, and it waits: there is time to try them.)
+  await say('Every place we come to has things you can click as well.');
+  await say('Try it! Click the tree, the moon, or the flowers.');
   await say('Now listen. This is how my song begins…');
   await teach(line(0), SONG[0].ref);
   music('fold');

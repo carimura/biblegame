@@ -23,6 +23,16 @@ const el = overlay(`<p class="cue"></p>
 const strings = [...el.querySelectorAll('.string')], verse = el.querySelector('.verse');
 el.classList.add('harp');
 const cue = text => (el.querySelector('.cue').textContent = text);
+const MORE = '<small class="more">click to continue</small>';
+// What is said when it is the player's turn to play: spelled out the first time, short after that.
+let shown = false;
+const turn = () => (shown ? 'Your turn!' : ((shown = true), 'Can you play the notes like I just did? Try!'));
+// A line has been played: its reference comes up, and it stays to be read until a click.
+async function linger() {
+  verse.classList.add('done');
+  await sleep(700);
+  await click(el);
+}
 
 function ring(i) {
   pluck(STRINGS[i]);
@@ -80,19 +90,19 @@ async function round(notes) {
     cue(guide ? 'Let’s listen again…' : 'Listen…');
     await sleep(guide ? 1100 : 500);
     await play(notes);
-    cue('Your turn!');
+    cue(turn());
     if (await echo(notes, guide)) return;
   }
 }
 
 // chunks: [{ words, notes }, ...] for one line of the psalm. The player learns its first three pieces by ear (more
 // than that is a long sit at the harp). Then the words take over the screen and the whole line plays by itself,
-// and the scene goes on without a click. With `whole`, the player plays those pieces back in one go as well: too
+// and stays to be read until a click. With `whole`, the player plays those pieces back in one go as well: too
 // hard for the first scenes, kept for later. With `full` null there is no reading back of this line alone: the harp
 // is left on the screen for `psalm` to follow straight on (the last scene).
 export async function teach(chunks, ref, full = 0, whole = false) {
   verse.className = 'verse';
-  verse.innerHTML = chunks.map(c => `<span>${c.words}</span>`).join(' ') + `<small>${ref}</small>`;
+  verse.innerHTML = chunks.map(c => `<span>${c.words}</span>`).join(' ') + `<small>${ref}</small>` + MORE;
   const spans = [...verse.querySelectorAll(':scope > span')], light = (list, cls) => list.forEach(s => (s.className = cls));
   const mine = chunks.slice(0, 3);
   cue('');
@@ -120,8 +130,7 @@ export async function teach(chunks, ref, full = 0, whole = false) {
   el.classList.add('read');
   await sleep(1700);
   await recite(chunks, spans, full, BEAT);
-  verse.classList.add('done');
-  await sleep(3200); // time to read the verse, then on without a click
+  await linger();
   await close();
 }
 
@@ -140,29 +149,47 @@ async function close() {
   el.classList.remove('read');
 }
 
-// Lines of the song played through, their words filling the screen one line at a time. Nothing to do but listen.
+// Several lines of the song on one page. The page starts with no words on it: `through` plays the lines straight
+// through, and each phrase drops into its place, large and bright, as it is played, then settles. `look(n)` is
+// called as line n begins.
+const leaf = song => song.map(({ pieces }) => `<p>${pieces.map(([words]) => `<span>${words}</span>`).join(' ')}</p>`).join('');
+async function through(song, full, look) {
+  const spans = [...verse.querySelectorAll('p > span')];
+  for (let n = 0, at = 0; n < song.length; at += song[n++].pieces.length) {
+    look?.(n);
+    await recite(song[n].pieces.map(([, notes]) => ({ notes })), spans.slice(at), full, 440); // a little quicker than when it is being taught
+  }
+}
+
+// The song played through with its words filling the screen, which stay to be read until a click. Nothing to do but
+// listen. One line is shown large; several (the song so far, by the fire) go together on one page.
 export async function hear(song, full) {
   quiet(true);
   cue('');
   verse.innerHTML = '';
   reading();
   await sleep(1300);
-  for (const { ref, pieces } of song) {
+  if (song.length > 1) {
+    verse.className = 'verse page few';
+    verse.innerHTML = '<h2>Our song so far</h2>' + leaf(song) + `<small>${song[0].ref}–${song.at(-1).ref.split(':')[1]}</small>` + MORE;
+    await sleep(500);
+    await through(song, full);
+  } else {
+    const [{ ref, pieces }] = song;
     verse.className = 'verse';
-    verse.innerHTML = pieces.map(([words]) => `<span>${words}</span>`).join(' ') + `<small>${ref}</small>`;
+    verse.innerHTML = pieces.map(([words]) => `<span>${words}</span>`).join(' ') + `<small>${ref}</small>` + MORE;
     await sleep(500);
-    await recite(pieces.map(([, notes]) => ({ notes })), [...verse.querySelectorAll(':scope > span')], full, 440); // a little quicker than when it is being taught
-    verse.classList.add('done');
-    await sleep(1800);
-    verse.classList.add('gone');
-    await sleep(500);
+    await recite(pieces.map(([, notes]) => ({ notes })), [...verse.querySelectorAll(':scope > span')], full, 440);
   }
+  await linger();
+  verse.classList.add('gone');
+  await sleep(500);
   await close();
 }
 
-// The end of the chapter: the whole psalm on one page, played straight through without a pause as its words light,
-// over chords grown loud. The world draws back into a little window beside the words, and `look(n)` is called as
-// line n begins, so that the window can show the scene the line belongs to.
+// The end of the chapter: the whole psalm on one page, played straight through without a pause, its words dropping
+// in as they are played, over chords grown loud. The world draws back into a little window beside the words, and
+// `look(n)` is called as line n begins, so that the window can show the scene the line belongs to.
 // If there is a recording for the ending (see `anthem`) that plays instead, with the whole psalm lit to read.
 export async function psalm(song, look) {
   quiet(true);
@@ -170,22 +197,18 @@ export async function psalm(song, look) {
   verse.classList.add('gone'); // if it follows straight on from the harp, the line under the harp fades first
   await sleep(500);
   verse.className = 'verse page gone';
-  verse.innerHTML = '<h2>Psalm 23</h2>' + song.map(({ pieces }) => `<p>${pieces.map(([words]) => `<span>${words}</span>`).join(' ')}</p>`).join('') + '<h3>Chapter 1 complete</h3><small>click to go back to the map</small>';
+  verse.innerHTML = '<h2>Psalm 23</h2>' + leaf(song) + '<h3>Chapter 1 complete</h3><small>click to go back to the map</small>';
   reading();
   inset();
   swell();
   await sleep(1600); // the harp fades, the world draws back, and the page takes its place, unseen until it is there
   verse.classList.remove('gone');
   await sleep(800);
-  const spans = [...verse.querySelectorAll('p > span')], recorded = await anthem();
+  const recorded = await anthem();
   if (recorded) {
-    spans.forEach(s => (s.className = 'got'));
+    verse.querySelectorAll('p > span').forEach(s => (s.className = 'got'));
     await sleep(recorded);
-  } else
-    for (let n = 0, at = 0; n < song.length; at += song[n++].pieces.length) {
-      look(n);
-      await recite(song[n].pieces.map(([, notes]) => ({ notes })), spans.slice(at), 6, 440);
-    }
+  } else await through(song, 6, look);
   verse.classList.add('done');
   await sleep(1500);
   await click(el);
@@ -215,6 +238,7 @@ export async function answer(keys, phrases) {
     }, { signal: over.signal });
   }
   roam(false); // he stands and listens
+  quiet(true);
   for (const notes of phrases)
     for (let guide = false, right = false; !right; guide = true) {
       say(guide ? 'Let’s listen again…' : 'Listen…');
@@ -223,7 +247,7 @@ export async function answer(keys, phrases) {
         strike(keys.find(k => k.string === i));
         await sleep(beats * BEAT);
       }
-      say('Your turn!');
+      say(turn());
       right = await new Promise(done => {
         let n = 0;
         const mark = on => keys.forEach(k => k.el.classList.toggle('next', on && guide && k.string === notes[n][0]));
@@ -244,5 +268,6 @@ export async function answer(keys, phrases) {
   say('');
   over.abort();
   for (const k of keys) k.el.classList.remove('key', 'play');
+  quiet(false);
   roam(true);
 }

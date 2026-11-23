@@ -61,6 +61,10 @@ export const NOTES = {
   owl: note('God made the night, and the creatures that wake in it.', 'You make darkness, and it is night,<br>In which all the beasts of the forest creep about.', 'Psalm 104:20'),
   badger: note('God made the rock badgers, small as they are, and gave them a safe home.', 'The rock badgers are a feeble folk,<br>Yet they make their homes in the crags;', 'Proverbs 30:26'),
   fear: note('When something frightens us, we can trust God.', 'Whenever I am afraid,<br>I will trust in You.', 'Psalm 56:3'),
+  light: note('God made the light, and it was good.', 'This is the message which we have heard from Him and declare to you, that God is light and in Him is no darkness at all.', '1 John 1:5'),
+  dark: note('God called the darkness Night. Nothing is hidden from Him in it.', 'Indeed, the darkness shall not hide from You,<br>But the night shines as the day;<br>The darkness and the light are both alike to You.', 'Psalm 139:12'),
+  heaven: note('God made the sky, and it tells how great He is.', 'The heavens declare the glory of God;<br>And the firmament shows His handiwork.', 'Psalm 19:1'),
+  above: note('God set waters above the sky, and they praise Him too.', 'Praise Him, you heavens of heavens,<br>And you waters above the heavens!', 'Psalm 148:4'),
 };
 
 // Counting out loud. Gives back a function: hand it each thing as it is collected or counted, and that thing's

@@ -1,6 +1,6 @@
 // Scene 2: green pastures. "He makes me to lie down in green pastures."
 // The flock is hungry. Not all grass is good grass: find the clover, let them eat, then settle each one.
-import { scene, show, layer, plane, fx, clamp, control, arrive, lead, exit, sleep, walk, when, still, go, say, tell, on } from './engine.js';
+import { scene, show, layer, plane, fx, clamp, control, arrive, lead, exit, sleep, walk, when, still, go, say, tell, on, place, IN } from './engine.js';
 import { rnd, cut, ridge, hills, olive, grasses, tufts } from './art.js';
 import { music, munch } from './audio.js';
 import { teach } from './harp.js';
@@ -92,11 +92,21 @@ export function enter(side, look) {
   music('pastures');
   field.append(cast.david, ...cast.flock);
   control(cast.david, find);
-  arrive(side === 'right' ? W - 220 : 220, 780);
+  arrive(side === 'right' ? W - IN : IN, 780);
   lead(cast.flock, side === 'right' ? 1 : -1);
   if (look) return; // only looked back at, from the ending: nothing begins
   if (!begun) story();
   begun = true;
+}
+
+// Looked back at, from the ending: the flock in the clover, eating, then lying down one by one.
+export function look() {
+  lead([]);
+  cast.flock.forEach((s, i) => {
+    place(s, CLOVER[0] + GRAZE[i][0], CLOVER[1] + GRAZE[i][1]);
+    s.classList.add('grazing');
+    setTimeout(() => s.classList.replace('grazing', 'resting'), 2400 + i * 700);
+  });
 }
 
 async function story() {
@@ -136,7 +146,7 @@ async function story() {
 
   // A full sheep still will not lie down until its shepherd comes close. Each one answers a click only when he is near.
   await say('They have eaten their fill.');
-  tell('But a sheep only lies down when it feels safe, with its shepherd close by. Walk to each one and stroke it.');
+  tell('But a sheep only lies down when it feels safe, with its shepherd close by. Walk to each one and pet it.');
   const count = counter();
   await Promise.all(flock.map(s => new Promise(done => {
     s.task = () => {

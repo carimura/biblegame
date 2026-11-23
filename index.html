@@ -49,8 +49,8 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .tag{opacity:0;transition:opacity .3s;pointer-events:none}
 .named .tag{opacity:1}
 .tag text{font:600 28px Georgia,serif;fill:var(--ink)}
-#gate{transition:transform 1.4s ease-in-out}
-#gate.open{transform:scaleX(.16) skewY(-14deg);pointer-events:none}
+#gate,.gate{transition:transform 1.4s ease-in-out}
+#gate.open,.gate.open{transform:scaleX(.16) skewY(-14deg);pointer-events:none}
 
 /* the sky moves: clouds drift round and round, and every so often birds cross it */
 .drift{animation:drift 520s linear infinite}
@@ -99,8 +99,8 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .note cite{display:block;margin-top:8px;font-size:18px;font-style:normal;letter-spacing:.03em;color:#b65a3c}
 .count{position:absolute;z-index:1;width:76px;height:76px;margin:-92px 0 0 -38px;border-radius:50%;display:grid;place-items:center;font-size:46px;font-weight:600;pointer-events:none;animation:count 2s ease-out both}
 @keyframes count{0%{scale:.3;opacity:0}10%{scale:1.3;opacity:1}20%{scale:1}75%{opacity:1;translate:0 -26px}100%{opacity:0;translate:0 -40px}}
-.beacon{fill:none;stroke:rgba(255,246,200,.95);stroke-width:5;pointer-events:none;transform-box:fill-box;transform-origin:center;animation:ring 1.6s ease-out infinite}
-.way{position:absolute;top:286px;width:104px;height:104px;border-radius:50%;display:grid;place-items:center;opacity:0;transition:opacity .6s}
+.beacon{fill:none;stroke:rgba(255,246,200,.95);stroke-width:5;filter:drop-shadow(0 0 3px rgba(90,55,20,.9));pointer-events:none;transform-box:fill-box;transform-origin:center;animation:ring 1.6s ease-out infinite}
+.way{position:absolute;top:400px;width:104px;height:104px;border-radius:50%;display:grid;place-items:center;opacity:0;transition:opacity .6s}
 .way.right{right:26px}
 .way.left{left:26px;--d:-10px}
 .way.left svg{transform:scaleX(-1)}
@@ -110,6 +110,11 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .place.on{opacity:1}
 .place small{display:block;margin-top:4px;font-size:20px;font-weight:400;opacity:.7}
 .bubble small{display:block;margin-top:8px;font-size:.62em;letter-spacing:.03em;color:#b65a3c}
+/* a note on something God made, given inside what he says */
+.aside{display:block;margin-top:14px;padding-top:12px;border-top:2px solid rgba(182,90,60,.25);font-size:.8em;text-align:center}
+.aside b,.aside q,.aside cite{display:block}
+.aside q{margin-top:6px;font-style:italic;quotes:"\201C" "\201D"}
+.aside cite{margin-top:6px;font-size:.8em;font-style:normal;letter-spacing:.03em;color:#b65a3c}
 
 /* night and lamplight: a dark wash over the scene, with a hole in it where the scene says there is light.
    Inside the hole the picture is as clear as by day; a faint warm tint sits over it. The hole opens as the light is lit. */
@@ -121,12 +126,10 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .lit .fx.glow{opacity:1}
 
 /* things in the later scenes */
-.pond .rush path{animation:rush 1s linear infinite}
-@keyframes rush{to{stroke-dashoffset:-106}}
-/* the stream out of the pool: bands of water and flecks of foam racing down it, and foam bobbing where it pours over */
-.race{animation:race .62s linear infinite}
-.race.quick{animation-duration:.4s}
-@keyframes race{to{transform:translateY(96px)}}
+/* light on moving water: many dashes sliding along the lines the current takes, each at its own pace (set where it
+   is drawn), then run together and made to waver by the #water filter so they read as water, not as lines */
+.current path{fill:none;stroke-linecap:round;animation:run 1s linear infinite}
+@keyframes run{to{stroke-dashoffset:var(--run)}}
 .foam circle{transform-box:fill-box;transform-origin:center;animation:froth .34s ease-in-out infinite alternate}
 @keyframes froth{to{transform:translateY(-6px) scale(1.2)}}
 .spot .wave{opacity:0;transform-box:fill-box;transform-origin:center}
@@ -134,9 +137,9 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .dam .slot{fill:rgba(255,255,255,.3);stroke:#fff;stroke-width:4;stroke-dasharray:9 8;stroke-linecap:round}
 .ripple{fill:none;stroke:#eef9fd;stroke-width:3;transform-box:fill-box;transform-origin:center;animation:ripple 1.8s ease-out infinite}
 @keyframes ripple{from{transform:scale(.25);opacity:.9}to{transform:scale(1.25);opacity:0}}
-.pond .rush,.pond .outflow,.pond .calm{transition:opacity 2.4s}
-.pond .calm,.pond.still .rush,.pond.still .outflow{opacity:0}
-.pond.still .calm{opacity:1}
+.pond .rush,.pond .outflow,.pond .calm{transition:opacity 2.4s,visibility 0s 2.4s}
+.pond .calm,.pond.still .rush,.pond.still .outflow{opacity:0;visibility:hidden}
+.pond.still .calm{opacity:1;visibility:visible;transition-delay:0s}
 /* a thing that stands in the scene is placed by its own transform, so what shakes or tips is the drawing inside it */
 .bush>g,.cup>g{transform-box:fill-box;transform-origin:50% 100%}
 .bush.play>g{animation:shake .6s ease-in-out}
@@ -154,24 +157,111 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .flame{transform-box:fill-box;transform-origin:50% 100%;animation:flicker .45s ease-in-out infinite alternate}
 .flame+.flame{animation-duration:.33s}
 @keyframes flicker{to{transform:scale(1.1,.88) rotate(4deg)}}
+/* laying and lighting the fire, close up: what is clicked in its turn goes from the grass onto the fire; out of turn
+   it only shakes. Then the stones are struck, a spark lands in the dry grass, and the flames grow. */
+.pit{height:640px}
+.pit .laid,.pit .flint,.pit .ember,.pit .fuel.gone{display:none}
+.pit .laid.on,.pit.built .flint,.pit.sparked .ember{display:inline}
+.pit .laid.on{animation:lay .4s ease-out}
+@keyframes lay{from{transform:translateY(-70px);opacity:0}}
+.fuel>g,.flint .a,.flint .b{transform-box:fill-box;transform-origin:50% 100%}
+.fuel.play>g{animation:shake .6s ease-in-out}
+.flint.play .a{animation:strike .35s ease-in}
+.flint.play .b{animation:strike .35s ease-in;--to:-16px}
+@keyframes strike{50%{transform:translateX(var(--to,16px))}}
+.pit .sparks{opacity:0;transform-box:fill-box;transform-origin:50% 100%}
+.flint.play .sparks{animation:spark .6s ease-out .15s}
+@keyframes spark{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:translate(-50px,-10px) scale(1.5)}}
+.pit .ember{animation:blink .5s ease-in-out infinite}
+.pit .smoke{opacity:0;transition:opacity 1.2s}
+.pit.sparked .smoke{opacity:.6}
+.pit .heat{opacity:calc(var(--breath,0)*.5);filter:blur(30px);transition:opacity 2s}
+.pit .flames{transform:scale(var(--breath,0));transform-origin:0 -6px;transition:transform 2s ease-out}
+/* the water channels, close up: each stone turns a quarter when clicked, and the water shows in it once it has got that far */
+.run{height:600px}
+.run .turn{transition:transform .3s ease-in-out}
+.run .wet{opacity:0;transition:opacity .4s}
+.run .tile.on .wet,.run.full .wet{opacity:1}
+.run .brim{transform-box:fill-box;transform-origin:0 50%;transform:scaleX(0);transition:transform 1.2s}
+.run.full .brim{transform:scaleX(1)}
 .shade .seen,.shade.known .dark{display:none}
 .shade.known .seen{display:inline}
 .shade .eyes{animation:blinking 3.4s infinite}
 @keyframes blinking{0%,92%,100%{opacity:1}95%{opacity:0}}
 .trough .water{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(0);transition:transform 1s}
-.trough[data-fill="1"] .water{transform:scaleY(.36)}
-.trough[data-fill="2"] .water{transform:scaleY(.7)}
 .trough[data-fill="3"] .water{transform:scaleY(1)}
 .trough .spill{opacity:0;transition:opacity 1s .8s}
 .trough[data-fill="3"] .spill{opacity:1}
 
+/* the picture lock on the last gate: lines of the song, each with a wheel where a word is left out, showing a
+   picture and its word. Which lines are right is told (in green) only once all are, or after a long while. */
+.lock{padding:30px 64px 28px;border-radius:26px;transform:rotate(-.6deg);font-size:38px}
+.lock h3{margin:0 0 12px;font-size:25px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;text-align:center;opacity:.6}
+.lock p{display:flex;align-items:center;gap:20px;margin:12px 0;transition:color .5s}
+.tumbler{flex:none;display:flex;align-items:center;gap:16px;padding:6px 26px 6px 6px;border:6px solid #a67c55;border-radius:70px;cursor:pointer;transition:border-color .5s}
+.tumbler svg{width:92px;height:92px;border-radius:50%}
+.tumbler i{width:270px;text-align:center;font-style:normal;font-weight:600}
+.told .got{color:#3d7d3a}
+.told .got .tumbler{border-color:#5fae4c}
+.tumbler.spin svg{animation:spin .3s ease-out}
+@keyframes spin{from{transform:rotate(-120deg) scale(.7)}}
+.lock small{display:block;margin-top:14px;text-align:center;font-size:22px;opacity:.6}
+
 /* the ending: the world draws back into a little window beside the psalm, and looks back at each scene as its line is played */
-#world{transform-origin:100% 50%;transition:transform 1.5s ease-in-out,border-radius 1.5s,opacity .35s}
+#world{transform-origin:100% 50%;transition:transform 1.5s ease-in-out,border-radius 1.5s}
 #stage.inset{background:#1d1833}
 #stage.inset #world{transform:translateX(calc(var(--s,1)*-64px)) scale(.34);border-radius:calc(var(--s,1)*70px);overflow:hidden;box-shadow:0 0 0 calc(var(--s,1)*26px) var(--cream),calc(var(--s,1)*30px) calc(var(--s,1)*50px) calc(var(--s,1)*90px) rgba(0,0,0,.5)}
 #stage.inset .read{background:none}
 #stage.inset .way{display:none} /* no arrows pointing onward out of the window */
 #stage.inset .page{left:calc(50% - 300px);width:880px;font-size:31px}
+
+/* Creation. One picture, 1600x900, kept in the middle of the window and drawn a little past its edges. It is made
+   of sheets (each an SVG of its own, so that moving or fading one costs nothing), washes of colour and light, and
+   loose pieces, in ranks from back to front. --lit: is there any light yet. --day: how much of the day is up. */
+.tableau{position:absolute;left:50%;top:50%;width:1600px;height:900px;margin:-450px 0 0 -800px;transform:scale(var(--s,1));--lit:0;--day:0}
+.rank{position:absolute;inset:0;pointer-events:none}
+.sheet{position:absolute;left:0;top:0;width:1600px;height:900px;overflow:visible;pointer-events:none}
+.piece{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;will-change:transform}
+.piece .key,.wave .key{cursor:grab}
+.piece.held{z-index:1}
+.piece.next{animation:nextglow 1s ease-in-out infinite}
+.fresh{animation:appear 1.4s ease-out}
+@keyframes appear{from{opacity:0}}
+.wash{position:absolute;inset:-200px -300px;pointer-events:none}
+.wash.base{background:#06050c}
+.wash.dusk{background:var(--grain),linear-gradient(#1d2250,#2f3570 62%,#454a86);opacity:var(--lit)}
+.wash.dawn{background:var(--grain),linear-gradient(#fffaf0,#fdf0c4 50%,#f9dc92);opacity:calc(var(--lit)*var(--day))}
+.wash.void{background:#0b0a13;mix-blend-mode:multiply;opacity:calc(1 - var(--lit));transition:opacity 2s}
+.wash.burst{background:radial-gradient(circle at 50% 42%,#fffef6,#fff0bd 45%,#ffdc7c);opacity:0;transition:opacity 1.4s ease-in}
+.wash.burst.on{opacity:1}
+/* by night the waters go dark; the wheel of day and night keeps its own colours */
+.wave{will-change:transform;filter:brightness(calc(.36 + .64*var(--day))) saturate(calc(1.8 - .8*var(--day))) hue-rotate(calc(24deg - 24deg*var(--day)));animation:swell var(--t,7s) ease-in-out var(--d,0s) infinite alternate}
+@keyframes swell{from{translate:-14px -5px}to{translate:14px 5px}}
+.stir{fill:none;stroke:rgba(150,160,215,.3);stroke-width:3;transform-box:fill-box;transform-origin:center;animation:ripple 2.4s ease-out forwards}
+/* the wheel of day and night: discs one inside another, so that turning one turns those lying on it */
+.wheel,.disc{position:absolute;left:0;top:0;width:0;height:0}
+.wheel{visibility:hidden;opacity:0;transition:transform 2.8s ease-in-out,opacity 1s}
+.wheel.on{visibility:visible;opacity:1}
+/* (a disc keeps a layer of its own while it can be turned: paper drawn straight into a turned picture comes out black) */
+.disc{will-change:transform;transition:transform .5s ease-in-out}
+.whole .disc{will-change:auto;transition:none}
+.disc>svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+/* the sky is unrolled from the left, like a curtain */
+.curtain{position:absolute;left:-300px;top:0;width:0;height:900px;overflow:hidden;transition:width 5s ease-in-out}
+.curtain.spread{width:2200px}
+.curtain .sheet{left:300px;opacity:calc(.1 + .72*var(--day))}
+.cord{fill:none;stroke:#e4d6b4;stroke-width:4}
+.telling{top:auto;bottom:30px;width:max-content;max-width:520px;padding:16px 34px;font-size:28px;font-weight:400;line-height:1.3;transition:opacity .5s}
+.unlit .telling{background:#14121f;color:#aaa5c4;box-shadow:none} /* before there is light, even the storyteller's card is dark */
+.week{position:absolute;right:30px;top:28px;display:flex;gap:11px;opacity:0;transition:opacity 2s}
+.week.on{opacity:1}
+.week i{width:20px;height:20px;border:3px solid var(--cream);border-radius:50%;box-shadow:0 0 0 2px rgba(59,47,42,.3),inset 0 0 0 2px rgba(59,47,42,.3);opacity:.7;transition:background 2s,opacity 2s}
+.week i.done{background:#f4c95d;opacity:1}
+
+/* paused (the Esc key): nothing moves, and a card asks whether to go on or back to the map */
+.paused #world *{animation-play-state:paused!important}
+.pause{z-index:5;transition:opacity .25s}
+.pause b{display:inline-block;margin:26px 12px 8px;padding:14px 34px;border-radius:14px;font-size:30px;cursor:pointer}
 
 #fade{position:absolute;inset:0;background:#17142a;opacity:0;pointer-events:none;transition:opacity .7s}
 #fade.on{opacity:1;pointer-events:auto}
@@ -180,22 +270,29 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 /* overlays */
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(28,22,48,.68);opacity:0;pointer-events:none;transition:opacity .9s,background 1.2s}
 .overlay.on{opacity:1;pointer-events:auto}
+.overlay:not(.on) *{pointer-events:none!important} /* nothing on a screen that is put away may catch a click: the unseen harp's strings used to, over the middle of every scene */
 .title{padding:44px 80px 36px;border-radius:26px;text-align:center;transform:rotate(-1deg)}
 .title h3{margin:0 0 4px;font-size:24px;font-weight:400;letter-spacing:.14em;text-transform:uppercase;opacity:.6}
 .title h1{margin:0;font-size:68px;font-weight:600}
 .title h2{margin:8px 0 26px;font-size:34px;font-weight:400;color:#b65a3c}
 .title p{margin:0;font-size:24px;opacity:.7}
-/* the map of the stories: gray until a story is finished, then it takes its colours; a ring beckons from one that can be played */
+/* the map of the stories: one that can be played is in colour, the rest gray; a ring beckons from it until it has been finished, and then its rim turns gold */
 .map{position:relative;flex:none;width:1600px;height:900px}
 .map>svg{position:absolute;left:0;top:0;overflow:visible}
 .map>small{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:15px;color:var(--cream);text-shadow:0 1px 3px rgba(20,40,10,.8)}
 .stop{position:absolute;isolation:isolate;width:190px;margin:-82px 0 0 -95px;display:flex;flex-direction:column;align-items:center;text-align:center}
-.stop svg{width:148px;height:148px;border:8px solid var(--cream);border-radius:50%;box-shadow:4px 7px 0 rgba(60,40,70,.16),8px 16px 24px rgba(40,25,60,.38);filter:grayscale(1) contrast(.8) brightness(1.1);transition:filter 2.6s}
-.stop.done svg{filter:grayscale(0) contrast(1) brightness(1)}
+.stop svg{width:148px;height:148px;border:8px solid var(--cream);border-radius:50%;box-shadow:4px 7px 0 rgba(60,40,70,.16),8px 16px 24px rgba(40,25,60,.38);filter:grayscale(1) contrast(.8) brightness(1.1);transition:border-color 2.6s}
+.stop.open svg{filter:none}
+.stop.done svg{border-color:#f4c95d}
 .stop b{max-width:170px;margin-top:12px;padding:5px 14px;border-radius:10px;font-size:21px;line-height:1.2}
 .stop.open{cursor:pointer}
 .stop.new::before{content:"";position:absolute;z-index:-1;left:50%;top:0;box-sizing:border-box;width:164px;height:164px;margin-left:-82px;border:7px solid #ffe29a;border-radius:50%;animation:beckon 1.8s ease-out infinite}
 @keyframes beckon{from{transform:scale(1);opacity:1}to{transform:scale(1.5);opacity:0}}
+/* a story just earned by finishing the one before it: gray as the map comes up, then it takes its colours in a flash */
+.stop.opened svg{animation:opened 1.7s ease-out}
+@keyframes opened{0%{filter:grayscale(1) contrast(.8) brightness(1.1)}28%{filter:brightness(3.2);transform:scale(1.28)}55%{filter:brightness(1.25);transform:scale(.95)}78%{transform:scale(1.04)}}
+.stop.opened::after{content:"";position:absolute;z-index:-1;left:50%;top:0;width:164px;height:164px;margin-left:-82px;border-radius:50%;background:radial-gradient(closest-side,#fff,#ffe9a8 50%,rgba(255,226,154,0));pointer-events:none;animation:flash 1.6s ease-out both}
+@keyframes flash{0%{transform:scale(.5);opacity:0}22%{opacity:1}100%{transform:scale(3.6);opacity:0}}
 .cue{height:48px;margin:0 0 4px;font-size:38px;color:var(--cream);text-shadow:0 2px 10px rgba(0,0,0,.5)}
 .lyre{height:560px;transition:opacity .7s}
 .overlay:not(.on) .lyre{transition:none}
@@ -221,11 +318,18 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .page h3{margin:26px 0 0;font-size:46px;font-weight:600;color:#ffe29a;opacity:0;transition:opacity 1.2s}
 .page small{margin-top:8px;font-size:24px}
 .page.done h3{opacity:1}
+.page.few{font-size:50px}
+/* a page starts with no words on it: each phrase drops into its place, large and gold, as it is played, then settles */
+.page p>span{display:inline-block;opacity:0;transform:translateY(-.8em) scale(1.3);transform-origin:0 60%;transition:opacity .35s,transform .5s cubic-bezier(.3,1.5,.5,1),color .9s}
+.page p>.now{transform:scale(1.13)}
+.page p>.got{transform:none}
 .verse>span{opacity:.3;transition:opacity .5s,color .5s}
 .verse .now{opacity:1;color:#ffe29a}
 .verse .got{opacity:1}
 .verse small{opacity:0;transition:opacity 1s}
 .verse.done small{opacity:.8}
+.verse .more{margin-top:30px;font-size:26px;color:#ffe29a}
+.verse.done .more{animation:blink 1.6s ease-in-out 1.2s infinite}
 </style>
 </head>
 <body>
@@ -247,6 +351,13 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
       <feOffset dx="5" dy="9"/>
       <feColorMatrix values="0 0 0 0 .16  0 0 0 0 .1  0 0 0 0 .22  0 0 0 .45 0" result="shadow"/>
       <feMerge><feMergeNode in="shadow"/><feMergeNode in="card"/></feMerge>
+    </filter>
+    <!-- Moving water: what is drawn runs together into soft shapes, and wavers as if seen through ripples. -->
+    <filter id="water" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency=".02 .05" numOctaves="2" seed="7" result="ripple"><animate attributeName="baseFrequency" dur="7s" values=".02 .05;.026 .062;.02 .05" repeatCount="indefinite"/></feTurbulence>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.2"/>
+      <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 9 -2.6"/>
+      <feDisplacementMap in2="ripple" scale="18" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
     <!-- The same for small pieces: less wobble, tighter shadow. -->
     <filter id="paperS" x="-25%" y="-25%" width="150%" height="160%" color-interpolation-filters="sRGB">
