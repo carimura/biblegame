@@ -151,6 +151,7 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 /* things in a scene that the song is played on: what to tap next glows */
 .key{pointer-events:auto;cursor:pointer}
 .key.next{animation:nextglow 1s ease-in-out infinite}
+.key.aim{filter:drop-shadow(0 0 12px #ffd76a) brightness(1.12)} /* where a thing being carried would go, if let go now */
 @keyframes nextglow{50%{filter:drop-shadow(0 0 16px #ffd76a) brightness(1.3)}}
 .fire .flames{display:none}
 .fire.lit .flames{display:inline}
@@ -234,10 +235,17 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .wash.void{background:#0b0a13;mix-blend-mode:multiply;opacity:calc(1 - var(--lit));transition:opacity 2s}
 .wash.burst{background:radial-gradient(circle at 50% 42%,#fffef6,#fff0bd 45%,#ffdc7c);opacity:0;transition:opacity 1.4s ease-in}
 .wash.burst.on{opacity:1}
-/* by night the waters go dark; the wheel of day and night keeps its own colours */
-.wave{will-change:transform;filter:brightness(calc(.36 + .64*var(--day))) saturate(calc(1.8 - .8*var(--day))) hue-rotate(calc(24deg - 24deg*var(--day)));animation:swell var(--t,7s) ease-in-out var(--d,0s) infinite alternate}
+/* by night the waters and all the earth go dark; the wheel of day and night, and the lights set in the sky, keep
+   their own colours. (Each such thing has a layer of its own, so that darkening it costs nothing.) */
+.daylit{will-change:transform;filter:brightness(calc(.36 + .64*var(--day))) saturate(calc(1.8 - .8*var(--day))) hue-rotate(calc(24deg - 24deg*var(--day)))}
+.wave{animation:swell var(--t,7s) ease-in-out var(--d,0s) infinite alternate}
 @keyframes swell{from{translate:-14px -5px}to{translate:14px 5px}}
-.stir{fill:none;stroke:rgba(150,160,215,.3);stroke-width:3;transform-box:fill-box;transform-origin:center;animation:ripple 2.4s ease-out forwards}
+/* the land: until it is raised it can be seen under the sea, which is clear from the third day on */
+.sea{opacity:.62;transition:opacity 2s}
+.ground{pointer-events:auto;transition:fill 1.5s}
+.grow{transform-box:fill-box;transform-origin:50% 100%;animation:grow 1.4s ease-out}
+@keyframes grow{from{transform:scale(0)}}
+.stir{fill:none;stroke:rgba(150,160,215,.65);stroke-width:4;transform-box:fill-box;transform-origin:center;animation:ripple 2.4s ease-out forwards}
 /* the wheel of day and night: discs one inside another, so that turning one turns those lying on it */
 .wheel,.disc{position:absolute;left:0;top:0;width:0;height:0}
 .wheel{visibility:hidden;opacity:0;transition:transform 2.8s ease-in-out,opacity 1s}
@@ -245,7 +253,24 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 /* (a disc keeps a layer of its own while it can be turned: paper drawn straight into a turned picture comes out black) */
 .disc{will-change:transform;transition:transform .5s ease-in-out}
 .whole .disc{will-change:auto;transition:none}
+.whole .key{pointer-events:none}
 .disc>svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+/* the shadow a creature's pieces are fitted into; and the creatures, once made, crossing the picture and coming round again */
+.shadow{fill:#3b2f2a;opacity:.22}
+.shadow.lined polygon{stroke:#efe3c8;stroke-width:3}
+.cross{animation:cross-over 30s linear infinite}
+@keyframes cross-over{from{translate:-160px 0}to{translate:1760px 0}}
+/* an animal that has just been put together gives a jump */
+.hop>g{animation:spring .6s ease-out}
+/* the two people, cut from paper; and the card they are first sewn on: a line is dotted until the thread has gone along it */
+.dolls{fill:#fbf3df}
+.stitch{fill:none;stroke:#a08a62;stroke-width:5;stroke-linecap:round;stroke-dasharray:.1 11;transition:stroke .3s}
+.stitch.sewn{stroke:#b65a3c;stroke-width:7;stroke-dasharray:16 7}
+.sewing text{font-size:21px;text-anchor:middle;fill:var(--ink)}
+.needle>circle+circle{fill:#b65a3c;transform:scale(1.9)}
+/* what is set in the sky (sun, moon, stars) rides round with the wheel, about its middle; a ring marks the place for a great light */
+.socket{fill:none;stroke:#fbf3df;stroke-width:5;stroke-dasharray:15 11;filter:drop-shadow(0 0 3px rgba(59,47,42,.9))}
+.riding{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
 /* the sky is unrolled from the left, like a curtain */
 .curtain{position:absolute;left:-300px;top:0;width:0;height:900px;overflow:hidden;transition:width 5s ease-in-out}
 .curtain.spread{width:2200px}
@@ -253,10 +278,33 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .cord{fill:none;stroke:#e4d6b4;stroke-width:4}
 .telling{top:auto;bottom:30px;width:max-content;max-width:520px;padding:16px 34px;font-size:28px;font-weight:400;line-height:1.3;transition:opacity .5s}
 .unlit .telling{background:#14121f;color:#aaa5c4;box-shadow:none} /* before there is light, even the storyteller's card is dark */
-.week{position:absolute;right:30px;top:28px;display:flex;gap:11px;opacity:0;transition:opacity 2s}
+/* the seven days, along the top: small round pictures, numbered. Gray until its day is done, then in colour, with a gold rim that glows */
+.week{position:absolute;right:26px;top:20px;display:flex;gap:10px;opacity:0;transition:opacity 2s}
 .week.on{opacity:1}
-.week i{width:20px;height:20px;border:3px solid var(--cream);border-radius:50%;box-shadow:0 0 0 2px rgba(59,47,42,.3),inset 0 0 0 2px rgba(59,47,42,.3);opacity:.7;transition:background 2s,opacity 2s}
-.week i.done{background:#f4c95d;opacity:1}
+.week i{position:relative;width:52px;height:52px;border:3px solid var(--cream);border-radius:50%;box-shadow:0 2px 5px rgba(40,25,60,.45);filter:grayscale(1) contrast(.75) brightness(1.1);opacity:.8;transition:filter 1.5s,opacity 1.5s,border-color 1.5s,box-shadow 1.5s}
+.week svg{display:block;width:100%;height:100%;border-radius:50%}
+.week b{position:absolute;left:50%;bottom:-12px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:var(--cream);font-size:15px;font-style:normal;line-height:22px;text-align:center;box-shadow:0 1px 3px rgba(40,25,60,.5)}
+.week i.done{filter:none;opacity:1;border-color:#f4c95d;box-shadow:0 0 15px 5px rgba(255,215,106,.85);animation:crown 1.3s ease-out}
+.week .done b{background:#f4c95d}
+@keyframes crown{30%{scale:1.5;filter:brightness(1.6)}}
+/* a puzzle solved: gold paper stars thrown out over the picture */
+.toss{animation:toss 2.1s cubic-bezier(.1,.6,.3,1) both}
+@keyframes toss{0%{transform:translate(800px,470px) rotate(0deg) scale(0)}75%{opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(var(--k));opacity:0}}
+/* the seventh day: whatever was made answers a click (`.play` is on it for two seconds) by moving. Sky and waters
+   move as whole sheets, which costs nothing; the rest move inside theirs. */
+.wave{transition:scale .6s ease-in-out}
+.wave:has(>.play){scale:1 .94}
+.sky:has(>.play){animation:billow 2s ease-in-out}
+@keyframes billow{30%{translate:0 -24px}65%{translate:0 10px}}
+.riding .wonder{pointer-events:auto}
+.riding .play>*{animation:beam 1.8s ease-in-out}
+@keyframes beam{50%{transform:scale(1.16) rotate(15deg)}}
+.plant.play .grow,.play~.plant .grow{animation:grow 1.4s ease-out,rock 1.6s ease-in-out}
+.made.play>g{animation:dart 1.5s ease-in-out}
+.made.play .wing{animation-duration:.13s}
+@keyframes dart{25%{transform:translateY(-150px) rotate(-14deg)}60%{transform:translateY(-40px) rotate(9deg)}}
+.beast.play>g,.dolls.play>g{animation:spring .6s ease-out}
+@keyframes spring{40%{transform:translateY(-44px)}}
 
 /* paused (the Esc key): nothing moves, and a card asks whether to go on or back to the map */
 .paused #world *{animation-play-state:paused!important}
@@ -279,6 +327,10 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 /* the map of the stories: one that can be played is in colour, the rest gray; a ring beckons from it until it has been finished, and then its rim turns gold */
 .map{position:relative;flex:none;width:1600px;height:900px}
 .map>svg{position:absolute;left:0;top:0;overflow:visible}
+/* the map before its first click, on a page newly opened: silent, and under a veil that only its card stands clear of */
+.map::after{content:"";position:absolute;inset:-80px -200px;background:rgba(28,22,48,.5);opacity:0;pointer-events:none;transition:opacity 1s}
+.hushed::after{opacity:1}
+.map .place{z-index:1}
 .map>small{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:15px;color:var(--cream);text-shadow:0 1px 3px rgba(20,40,10,.8)}
 .stop{position:absolute;isolation:isolate;width:190px;margin:-82px 0 0 -95px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .stop svg{width:148px;height:148px;border:8px solid var(--cream);border-radius:50%;box-shadow:4px 7px 0 rgba(60,40,70,.16),8px 16px 24px rgba(40,25,60,.38);filter:grayscale(1) contrast(.8) brightness(1.1);transition:border-color 2.6s}
@@ -323,13 +375,136 @@ body{display:flex;align-items:center;justify-content:center;font-family:"Iowan O
 .page p>span{display:inline-block;opacity:0;transform:translateY(-.8em) scale(1.3);transform-origin:0 60%;transition:opacity .35s,transform .5s cubic-bezier(.3,1.5,.5,1),color .9s}
 .page p>.now{transform:scale(1.13)}
 .page p>.got{transform:none}
-.verse>span{opacity:.3;transition:opacity .5s,color .5s}
+.verse>span:not(.sc){opacity:.3;transition:opacity .5s,color .5s}
 .verse .now{opacity:1;color:#ffe29a}
 .verse .got{opacity:1}
 .verse small{opacity:0;transition:opacity 1s}
 .verse.done small{opacity:.8}
 .verse .more{margin-top:30px;font-size:26px;color:#ffe29a}
 .verse.done .more{animation:blink 1.6s ease-in-out 1.2s infinite}
+
+/* Noah's Ark. The ark is drawn once, whole, and shows as much of itself as has been built. A part that has been
+   hoisted into its place (`.fit`) shows once it is `in`: a deck or the roof spreads out from the piece that was
+   hauled up. The planking comes on strake by strake (`planked`) and darkens with the pitch (`pitched`); the door
+   lets down as a ramp (`open`). A `.berth` is the outline of a place where a part could go. */
+.fit{opacity:0;transition:opacity .5s,transform 1.2s ease-out}
+.fit.in{opacity:1}
+.fit.deck,.fit.roof{transform:scaleX(.24)}
+.fit.deck.in,.fit.roof.in{transform:none}
+.berth{fill:rgba(255,255,255,.14);stroke:#fff;stroke-width:4;stroke-dasharray:10 9;stroke-linecap:round;opacity:0;transition:opacity .4s}
+.berth.on{opacity:.7}
+.berth.at{opacity:1;fill:rgba(255,226,154,.5);stroke:#ffe29a}
+.span{fill:none;stroke:#e3c08a;stroke-width:9;stroke-dasharray:16 12;opacity:.85}
+.skin>g{opacity:0;transition:opacity .5s calc(var(--k)*.32s)}
+.planked .skin>g{opacity:1}
+.skin path{transition:fill 2.5s}
+.pitched .skin>g:nth-child(odd) path{fill:#6f5239}
+.pitched .skin>g:nth-child(even) path{fill:#664a33}
+/* the door lets down from its sill to the ground, and is drawn up again */
+.hole,.ramp{opacity:0;transition:opacity .8s}
+.ramp{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(.04);transition:opacity .5s 2s,transform 2.4s ease-in-out}
+.hole{transition-delay:2s}
+.planked .fit.door{transition-delay:2s}
+.open .hole,.open .ramp{opacity:1;transition-delay:0s}
+.open .ramp{transform:none}
+.planked.open .fit.door{transition-delay:0s}
+.open .fit.door{opacity:0}
+.part.next,.creature.next{animation:nextglow 1s ease-in-out infinite}
+.winch{pointer-events:auto;cursor:pointer}
+.winch .crank{transform-origin:46px -60px}
+.winch.turning .crank{animation:winding .7s linear infinite}
+@keyframes winding{to{transform:rotate(360deg)}}
+.planbtn{position:absolute;left:30px;top:28px;padding:10px 30px;border-radius:14px;transform:rotate(-1.5deg);font-size:28px;cursor:pointer;pointer-events:auto}
+.gloom{background:linear-gradient(#3f4756,#6b7280 55%,#8a8f96);mix-blend-mode:multiply;opacity:var(--gloom,0);transition:opacity 4s}
+/* the storm drawing near: clouds that thicken as the sky darkens, and lightning (a bolt, and for a moment the gloom
+   lifts and everything is lit) */
+.thunderhead{opacity:calc(var(--gloom,0)*2.2);transition:opacity 4s}
+.bolt,.glare{opacity:0}
+.glare{background:rgba(255,251,230,.3)}
+.bolt.on,.glare.on{animation:lightning .7s ease-out}
+.gloom.on{animation:lifting .7s ease-out}
+@keyframes lightning{8%{opacity:1}20%{opacity:.15}32%{opacity:.8}100%{opacity:0}}
+@keyframes lifting{8%{opacity:calc(var(--gloom,0)*.15)}20%{opacity:calc(var(--gloom,0)*.85)}32%{opacity:calc(var(--gloom,0)*.3)}}
+/* the animals: one that is clicked hops; a giraffe ducks its head; a bird beats its wings when it is in the air */
+.creature.play .bob{animation:hop .55s ease-out}
+.neck{transform-origin:40px -146px;transition:transform .5s}
+.duck .neck{transform:rotate(52deg)}
+.pinion{transform-box:fill-box;transform-origin:50% 100%}
+.aloft .pinion{animation:flap .14s ease-in-out infinite alternate}
+.aloft .legs{display:none}
+/* the side of the ark, close up: pegs to be driven home with a mallet, then the gaps between the planks to be brushed with pitch */
+.hullside{height:640px;cursor:pointer}
+.peg{transition:transform .1s}
+.peg[data-n="1"]{transform:scale(.84)}
+.peg[data-n="2"]{transform:scale(.62)}
+.cast{fill:rgba(59,47,42,.38);transition:opacity .1s}
+.peg[data-n="2"] .cast{opacity:0}
+.mallet,.brush{pointer-events:none}
+.mallet>g{transform:translate(-12px,-24px) scale(1.12)}
+.mallet.hit>g{animation:thump .2s ease-in}
+@keyframes thump{45%{transform:translateY(24px) scale(.95)}}
+.brush,.tar .mallet{display:none}
+.tar .brush{display:inline}
+.tar{cursor:none}
+.seam{fill:#fbf1d6;transition:fill .25s}
+.seam.done{fill:#2a221f}
+.plank{transition:fill 1.8s}
+.tarred .plank{fill:#6b4f38}
+
+/* the ark cut open: stalls on three decks. A pair goes to its stall by sliding; the whole ark leans (`--tilt`) with
+   the weight in it, and at sea it rocks. By night every stall is dark until the lamp is brought to it (`lit`). */
+.hold{height:780px}
+.cue.long{height:auto;min-height:44px;max-width:1500px;margin:0 0 2px;font-size:30px;line-height:1.25;text-align:center}
+.keel{transform-origin:800px 790px;transform:rotate(var(--tilt,0deg));transition:transform 1.2s ease-in-out}
+.rocking .keel{animation:rocking 3.9s ease-in-out infinite alternate,heave 2.7s ease-in-out infinite alternate}
+@keyframes rocking{from{transform:rotate(-4.5deg)}to{transform:rotate(4.5deg)}}
+@keyframes heave{from{translate:0 -13px}to{translate:0 11px}}
+.lot{transition:transform .5s ease-in-out}
+.lot.afraid .bob{animation:shake .6s ease-in-out infinite}
+.lot.calls .bob{animation:hop .55s ease-out}
+.ramp.play{animation:shake .6s ease-in-out}
+.pen{fill:transparent;cursor:pointer}
+.pen.picked{stroke:#ffe29a;stroke-width:7;fill:rgba(255,226,154,.25)}
+.pen.next{stroke:#ffe29a;stroke-width:7;animation:blink 1s ease-in-out infinite}
+.dark{fill:#17142a;opacity:0;transition:opacity .7s;pointer-events:none}
+.night .dark{opacity:1}
+.night .lot>g:nth-child(3),.rocking .keel>g:first-child{visibility:hidden} /* no weights to tell by in the dark; and no blocks under it at sea */
+.night .dark.lit{opacity:0}
+.sum{font:600 56px Georgia,serif;fill:var(--cream);text-anchor:middle}
+.tally path{fill:none;stroke:var(--cream);stroke-width:6;stroke-linecap:round}
+/* rain: fine streaks falling aslant, over the place where the ark is built and over the sea */
+.rain{overflow:hidden;opacity:var(--rain,0);transition:opacity 3s}
+.rain::before,.rain::after{content:"";position:absolute;inset:-380px -260px -40px;background:var(--far);transform:skewX(-11deg);animation:rainfall .62s linear infinite}
+.rain::after{background:var(--near);animation-duration:.4s;opacity:.85}
+@keyframes rainfall{to{background-position:0 360px}}
+/* the ark on the waters, small: it rocks as it rides; the storm's sky, and the mountains, come and go slowly */
+.boat.riding>g,.roll{animation:riding 3.7s ease-in-out infinite alternate,heave 2.5s ease-in-out infinite alternate}
+@keyframes riding{from{transform:rotate(-8deg)}to{transform:rotate(8deg)}}
+.storm,.peaks{transition:opacity 4s}
+.green{opacity:0;transition:opacity 6s}
+.dry .green{opacity:1}
+/* the flood from above: the ark is carried over it, a wave at a time */
+.chart{height:780px}
+.craft{pointer-events:none}
+/* the storm, seen from the side: the ark is driven through it; she shudders at what she meets; a pale ring on the water is where lightning will strike */
+.ride{height:780px}
+.craft.hit>g{animation:shake .6s ease-in-out}
+.mark{fill:rgba(255,253,242,.16);stroke:#fffdf2;stroke-width:6;stroke-dasharray:14 12;animation:blink .5s ease-in-out infinite}
+/* the birds sent from the window; a ring that shows where to click or press next; the sun and the moon, as days go by */
+.beckon{opacity:0;pointer-events:none}
+.beckon.on{opacity:1;animation:blink 1s ease-in-out infinite}
+.piece.play .bob{animation:hop .55s ease-out}
+.sprig{display:none}
+.laden .sprig{display:inline}
+.fowl{transition:opacity .6s}
+.orb{animation:arise .8s}
+@keyframes arise{from{opacity:0}}
+/* the altar: stones that are carried to their places; and the bow in the cloud, drawn across the sky */
+.mound{height:780px}
+.stone{cursor:grab;transition:transform .12s}
+.bow path{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .15s linear}
+.bow.whole{animation:glory 2.4s ease-in-out infinite alternate}
+@keyframes glory{to{filter:brightness(1.18) saturate(1.25)}}
 </style>
 </head>
 <body>

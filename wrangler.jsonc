@@ -1,4 +1,4 @@
-// Publishes the game to https://play.awakenusa.com as static files on Cloudflare: `wrangler deploy` in this folder.
+// Publishes the game to https://shepherds-song.com and https://play.awakenusa.com as static files on Cloudflare: `wrangler deploy` in this folder.
 // Only index.html, src/ and sounds/ are published: each deploy copies just those into .site/ and uploads that, so
 // nothing else in this folder (the project notes above all) can go out by accident.
 {
@@ -6,5 +6,5 @@
   "compatibility_date": "2026-11-01",
   "build": { "command": "rm -rf .site && mkdir .site && cp -R index.html src sounds .site/ && find .site -name .DS_Store -delete" },
   "assets": { "directory": ".site" },
-  "routes": [{ "pattern": "play.awakenusa.com", "custom_domain": true }]
+  "routes": [{ "pattern": "play.awakenusa.com", "custom_domain": true }, { "pattern": "shepherds-song.com", "custom_domain": true }]
 }

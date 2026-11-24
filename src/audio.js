@@ -4,8 +4,10 @@ let ctx, out, bus, sfx, pad, bed, mix, held, noise, ready, grand;
 // The harp's seven strings, low to high (D major pentatonic).
 export const STRINGS = [220, 293.66, 329.63, 369.99, 440, 493.88, 587.33];
 
+// Whether sound is getting out yet: a browser holds it back on a page newly opened, until the page is clicked.
+export const sounding = () => ctx?.state === 'running';
 export function start() {
-  if (ctx) return;
+  if (ctx) return void ctx.resume(); // (made on the map, perhaps before any click: no sound comes out until one sets it going)
   ctx = new AudioContext();
   const limit = ctx.createDynamicsCompressor(); // lets the loud moments be loud without crackling
   limit.threshold.value = -10;
@@ -50,11 +52,13 @@ export function start() {
   lfo.connect(depth).connect(bed.gain);
   lfo.start();
   held = chord('D');
-  for (const name of ['gate', 'step1', 'step2', 'step3', 'step4', 'step5']) load(name);
+  for (const name of ['gate', 'step1', 'step2', 'step3', 'step4', 'step5', 'moo', 'roar', 'trumpet', 'maa', 'caw', 'coo', 'thunder', 'tie', 'hammer', 'swish', 'door', 'rush', 'plop']) load(name);
   ready = Promise.all(HARP.map(([, name]) => load(name)));
 }
 
-// Recorded sounds (public domain: effects from kenney.nl, the harp from VSCO 2). Nothing plays until a recording has arrived.
+// Recorded sounds (public domain: effects from kenney.nl, the harp from VSCO 2, the ox, the goat and the thunder from
+// BigSoundBank, with the mallet, the brush, the slam of the great door and the rushing water; the lion, the elephant, the raven,
+// the dove and the rope from Wikimedia Commons). Nothing plays until a recording has arrived.
 const clips = {};
 const load = (name, again = true) => fetch(`sounds/${name}.wav`).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => clips[name] = buf).catch(() => again && load(name, false)); // one more try if it fails to arrive
 function clip(name, gain) {
@@ -123,6 +127,39 @@ export function knock() {
 }
 // A wooden gate: the latch lifts and the hinge turns (a recording, as long as the gate takes to swing).
 export const creak = () => ctx && clip('gate', 0.3);
+// An ox lowing, and a lion's roar (recordings of the animals themselves: voices made up for them sounded like nothing of the kind).
+export const moo = () => ctx && clip('moo', 0.18);
+export const roar = () => ctx && clip('roar', 0.2);
+// An elephant trumpeting, a goat, a raven, a dove, and thunder (near, or with less `gain` far off): recordings too.
+export const trumpet = () => ctx && clip('trumpet', 0.2);
+export const maa = () => ctx && clip('maa', 0.16);
+export const caw = () => ctx && clip('caw', 0.16);
+export const coo = () => ctx && clip('coo', 0.18);
+export const thunder = (gain = 0.3) => ctx && clip('thunder', gain);
+// A rope made fast: a cord drawn through and pulled tight (a recording).
+export const tie = () => ctx && clip('tie', 0.24);
+// A wooden mallet coming down on wood (a gavel, slowed to less than half its pitch, to be as deep as a shipwright's);
+// a brush drawn along a plank; and a great door of timber: a barn door, slowed a little, its low rumble as it swings
+// (everything in it above 650 Hz is taken out: nothing in this door squeaks) and then, two and a half seconds on,
+// the slam as it comes home. Recordings.
+export const hammer = () => ctx && clip('hammer', 0.3);
+export const swish = () => ctx && clip('swish', 0.2);
+export const groan = () => ctx && clip('door', 0.34);
+// Water rushing by, for so long (a recording of a mountain stream in spate).
+export function rush(ms) {
+  if (!ctx || !clips.rush) return;
+  const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime, end = t + ms / 1000;
+  src.buffer = clips.rush;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.3, t + 0.08);
+  g.gain.setValueAtTime(0.3, end);
+  g.gain.linearRampToValueAtTime(0, end + 0.5);
+  src.connect(g).connect(sfx);
+  src.start(t, Math.random() * 1.5);
+  src.stop(end + 0.55);
+}
+// A fish leaping and falling back: a recording of a splash in a pond.
+export const plop = () => ctx && clip('plop', 0.3);
 // Something dropped in water.
 export function splash() {
   if (!ctx) return;
@@ -143,6 +180,22 @@ export function drip(freq) {
   o.connect(g).connect(bus);
   o.start(t);
   o.stop(t + 0.28);
+}
+// Something growing: a small whoosh, a breath of hiss that rises and is gone.
+export function sprout() {
+  if (!ctx) return;
+  const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), t = ctx.currentTime;
+  src.buffer = noise;
+  f.type = 'bandpass';
+  f.Q.value = 1.5;
+  f.frequency.setValueAtTime(600, t);
+  f.frequency.exponentialRampToValueAtTime(2400, t + 0.4);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.15, t + 0.18);
+  g.gain.linearRampToValueAtTime(0, t + 0.45);
+  src.connect(f).connect(g).connect(sfx);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + 0.46);
 }
 // Leaves and thorns stirred.
 export const rustle = () => ctx && puff(0.35, 2800, 0.3, 'highpass');
@@ -235,6 +288,22 @@ export function shine() {
 export function sweep() {
   ready.then(() => [1, 3, 4, 6].forEach((n, i) => setTimeout(() => pluck(STRINGS[n], 0.42), i * 95))); // once the harp has arrived
 }
+// A puzzle solved! The harp runs up through two octaves and comes down on a full chord, and bells ring out over it.
+export function cheer() {
+  if (!ctx) return;
+  [293.66, 369.99, 440, 587.33, 739.99, 880, 1174.66].forEach((f, i) => setTimeout(pluck, i * 75, f, 0.4));
+  setTimeout(() => [293.66, 440, 587.33, 739.99].forEach(f => pluck(f, 0.34)), 620);
+  [1174.66, 1479.98, 1760, 2349.32].forEach((f, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + 0.62 + i * 0.11;
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.05, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.6);
+    o.connect(g).connect(bus);
+    o.start(t);
+    o.stop(t + 1.7);
+  });
+}
 
 // A sheep's bleat. `f0` is the pitch of its voice: about 230 for a grown ewe, twice that for a lamb.
 export function bleat(f0 = 230, loud = 1) {
@@ -277,6 +346,27 @@ export function bleat(f0 = 230, loud = 1) {
     o.start(t);
     o.stop(t + dur);
   }
+}
+
+// A big animal's voice, made up: a low, dark note that rises a little and falls away. With `rough`, breath is mixed
+// into it. (Creation's ox and lion have recordings now, `moo` and `roar`: this one did not sound like an animal.)
+export function low(f0, dur = 1.2, rough) {
+  if (!ctx) return;
+  const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(), t = ctx.currentTime;
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(f0 * 0.8, t);
+  o.frequency.linearRampToValueAtTime(f0, t + dur * 0.3);
+  o.frequency.linearRampToValueAtTime(f0 * 0.72, t + dur);
+  f.type = 'lowpass';
+  f.frequency.value = f0 * 4;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.11, t + 0.12); // (measured: its peaks about as high as a sheep's bleat)
+  g.gain.setValueAtTime(0.11, t + dur - 0.35);
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  o.connect(f).connect(g).connect(sfx);
+  o.start(t);
+  o.stop(t + dur);
+  if (rough) puff(dur, f0 * 3, 0.3);
 }
 
 const CHORD = {
@@ -351,9 +441,14 @@ export function strum(full) {
 // seen: its own chords and pace, how bright or muffled it is (`tone`), how high it sits (`oct`), the voice it is
 // played in (`wave`), and for some a lilt of harp notes over the top (`lilt`: which notes of the chord, in what
 // order, -1 for a rest; `every`: how many to a bar). The valley is the tense one: louder (`level`), its strings
-// trembling (`throb`), a slow drum under it (`pulse`: beats to a bar). Until the first call the music just sits on
-// its opening chord.
+// trembling (`throb`), a slow drum under it (`pulse`: beats to a bar). `ring` is how loud the lilt is. Until the
+// first call the music just sits on its opening chord. The map has a tune of its own on the harp in place of a
+// lilt (`air`: which of the harp's seven strings, note by note, -1 for a rest). The building of the ark has a tune
+// too, but not on those strings: it has a note they have not got (`riff`: semitones above the D string, -1 for a rest).
 const SONGS = {
+  map: { loop: ['D', 'G', 'A', 'D', 'Bm', 'G', 'A', 'D'], bar: 6000, tone: 1000, every: 8, ring: 0.15,
+    air: [3, 4, 6, 4, 3, 4, 5, -1, 5, 6, 5, 4, 5, -1, 4, -1, 4, 2, 3, 2, 1, 2, -1, -1, 1, 3, 4, 3, 1, -1, -1, -1] }, // choosing a story: a small, easy tune, four bars long, which comes round twice over the chords
+  still: { loop: ['D'], bar: 3.6e6, tone: 700 }, // a story about to begin: the one chord, as it is before any music
   fold: { loop: ['G', 'D', 'A', 'Bm', 'G', 'A', 'D', 'D'], bar: 7000, tone: 700 },
   pastures: { loop: ['G', 'C', 'G', 'D', 'Em', 'C', 'D', 'G'], bar: 6000, tone: 1400, lilt: [0, 2, 1, 3], every: 8 }, // bright, a rising lilt
   waters: { loop: ['D', 'G', 'D', 'A', 'Bm', 'G', 'A', 'D'], bar: 6000, tone: 1000, oct: 2, wave: 'sine', lilt: [0, 1, 2, 3, 2, 1], every: 12 }, // high and clear, rippling
@@ -366,15 +461,34 @@ const SONGS = {
   void: { loop: ['Dm'], bar: 12000, tone: 300, oct: 0.5, level: 3 }, // before light: one low chord that never moves
   light: { loop: ['D', 'A', 'Bm', 'G', 'D', 'G', 'A', 'D'], bar: 6500, tone: 1700, oct: 2, wave: 'sine', lilt: [0, 2, 3, 2, 1, 3], every: 6 }, // the first day: high and bright
   sky: { loop: ['G', 'D', 'Em', 'C', 'G', 'C', 'D', 'G'], bar: 7000, tone: 1300, oct: 2, lilt: [3, -1, 2, -1, 3, 1, -1, -1], every: 8 }, // the second: wide and airy
+  land: { loop: ['G', 'C', 'D', 'G', 'Em', 'C', 'D', 'G'], bar: 6500, tone: 1200, lilt: [0, 1, 2, 1], every: 4 }, // the third: warm, with a steady step
+  lights: { loop: ['D', 'Bm', 'G', 'A', 'D', 'G', 'A', 'D'], bar: 7000, tone: 1500, oct: 2, wave: 'sine', lilt: [3, 2, 3, 1, 3, 2, 0, -1], every: 8 }, // the fourth: clear, and twinkling
+  life: { loop: ['G', 'Em', 'C', 'D', 'G', 'C', 'D', 'G'], bar: 5000, tone: 1500, lilt: [0, 3, 1, 3, 2, 3], every: 6 }, // the fifth: quick and darting
+  beasts: { loop: ['D', 'G', 'A', 'D', 'Bm', 'G', 'A', 'D'], bar: 6000, tone: 1300, wave: 'sawtooth', lilt: [0, 2, 1, 3], every: 4 }, // the sixth: warm strings, striding
+  // Noah's Ark
+  // The building: a work song. Nothing before it sounds like this: it swings in threes, four beats to the bar with
+  // the drum on every one, like mallets; its chords go down a whole step to C and back (the old way, where every
+  // other place keeps to the plain major); and over them the harp has a tune of its own, eight bars long.
+  yard: { loop: ['D', 'C', 'D', 'G', 'D', 'C', 'G', 'D'], bar: 5400, tone: 1200, every: 12, pulse: 4, ring: 0.2,
+    riff: [0, -1, 4, 7, -1, 7, 9, 7, 4, 0, -1, -1, 10, -1, 5, 2, -1, 5, 10, -1, -1, 5, -1, -1, 0, -1, 4, 7, -1, 7, 12, -1, 9, 7, -1, -1, 9, -1, 5, 9, -1, 12, 9, -1, 7, 5, -1, -1,
+      0, -1, 4, 7, -1, 7, 9, 7, 4, 0, -1, -1, 10, -1, 14, 12, -1, 10, 5, -1, -1, 2, -1, -1, 5, -1, 9, 12, -1, 9, 7, -1, 5, -1, -1, -1, 4, -1, 2, 0, -1, -1, -1, -1, -1, -1, -1, -1] },
+  coming: { loop: ['Em', 'C', 'G', 'D', 'Em', 'C', 'D', 'Em'], bar: 5000, tone: 900, wave: 'sawtooth', pulse: 2, lilt: [0, 2, 1, 3], every: 4 }, // the animals come under a darkening sky: striding, over a slow drum
+  flood: { loop: ['Dm', 'Am', 'Dm', 'C', 'Dm', 'F', 'Am', 'Dm'], bar: 7000, tone: 520, wave: 'sawtooth', level: 1.5, throb: 4, pulse: 2 }, // the rain and the rising waters: low, trembling, a slow drum
+  adrift: { loop: ['Am', 'F', 'C', 'G', 'Am', 'F', 'G', 'Am'], bar: 8000, tone: 800, oct: 2, wave: 'sine', lilt: [3, -1, -1, 1, -1, -1, 2, -1], every: 8 }, // the ark alone on the waters: wide and slow, a note now and then
+  olive: { loop: ['G', 'D', 'Em', 'C', 'G', 'C', 'D', 'G'], bar: 6500, tone: 1400, oct: 2, lilt: [0, 2, 3, -1, 1, 3, 2, -1], every: 8 }, // the dove: light and hopeful
+  bow: { loop: ['D', 'A', 'Bm', 'G', 'D', 'G', 'A', 'D'], bar: 5000, tone: 2200, wave: 'sawtooth', level: 2.6, pulse: 4, lilt: [0, 1, 2, 3, 2, 3, 1, 3], every: 8, ring: 0.18 }, // dry ground and the bow: the fullest and brightest of the chapter
+  rest: { loop: ['D', 'A', 'Bm', 'G', 'D', 'G', 'A', 'D'], bar: 4400, tone: 2400, wave: 'sawtooth', level: 3, pulse: 4, lilt: [0, 1, 2, 3, 2, 3, 1, 3], every: 8, ring: 0.2 }, // the seventh: it is finished! The loudest and brightest of them all: full strings, a drum on every beat, the harp running
 };
-let song, barTimer, liltTimer, pulseTimer, quieted = false, loud = 1;
+let song, wanted, barTimer, liltTimer, pulseTimer, quieted = false, loud = 1;
 export function music(name) {
   if (!ctx || grand || song === name) return;
-  song = name;
+  // Asked for before sound is allowed out (on the map, before any click): it begins when it is, with whatever was asked for last.
+  if (ctx.state !== 'running') return void ((wanted = name), (ctx.onstatechange = () => ctx.state === 'running' && music(wanted)));
+  song = wanted = name;
   clearInterval(barTimer);
   clearInterval(liltTimer);
   clearInterval(pulseTimer);
-  const { loop, bar, tone, oct = 1, wave, lilt, every, level = 1, throb, pulse } = SONGS[name];
+  const { loop, bar, tone, oct = 1, wave, lilt, air, riff, every, level = 1, throb, pulse, ring = 0.11 } = SONGS[name];
   loud = level;
   quiet(quieted);
   let i = 0, k = 0, now, first = true;
@@ -390,8 +504,11 @@ export function music(name) {
   if (lilt)
     liltTimer = setInterval(() => {
       const n = lilt[k++ % lilt.length];
-      if (!quieted && n >= 0) pluck(CHORD[now][2 + (n % (CHORD[now].length - 2))] * 2, 0.11);
+      if (!quieted && n >= 0) pluck(CHORD[now][2 + (n % (CHORD[now].length - 2))] * 2, ring);
     }, bar / every);
+  // The tune begins with the first chord, once the harp has arrived.
+  const tune = riff ?? air, sing = () => (n => !quieted && n >= 0 && pluck(riff ? 293.66 * 2 ** (n / 12) : STRINGS[n], ring))(tune[k++ % tune.length]);
+  if (tune) ready.then(() => song === name && (sing(), (liltTimer = setInterval(sing, bar / every))));
   if (pulse) pulseTimer = setInterval(() => quieted || thud(), bar / pulse);
 }
 // The ending: under the whole psalm the chords come up to three times as loud, and brighter. From then on the music

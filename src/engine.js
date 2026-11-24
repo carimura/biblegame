@@ -31,6 +31,13 @@ export const tap = el => new Promise(r => el.addEventListener('pointerdown', e =
 export const when = test => new Promise(r => (function check() { test() ? r() : requestAnimationFrame(check); })());
 export const smooth = t => t * t * (3 - 2 * t);
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+// A secret short cut, for while the game is being made. Played from the computer it is made on (`LOCAL`), Shift+.
+// (the > key) puts whatever is being waited for as it would be when done, and the story goes on from there.
+// `leap(how)` says how to do that for the thing in hand: each one takes the place of the last, and is used up when taken.
+export const LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+let short;
+export const leap = how => (short = how);
+if (LOCAL) addEventListener('keydown', e => e.key === '>' && !e.repeat && short && (how => ((short = null), how()))(short));
 
 export function html(markup) {
   const t = document.createElement('template');
@@ -192,7 +199,7 @@ export async function walk(g, x, y, speed = 150) {
 // ---- The hero ----
 // A click on the ground walks the hero there. The scene's `finder(x, y)` turns the click into waypoints
 // [x, y, thenDo]; that is where a scene keeps him out of walls. The camera follows him.
-const SPEED = 200;
+const SPEED = 200; // (a hero may have a `speed` of his own)
 let hero, finder, route = [], roaming = false, talking = false, waiting, paced = 0;
 
 export function control(g, find) {
@@ -247,17 +254,22 @@ stage.addEventListener('pointerdown', e => {
 });
 
 // Something the hero does only when he is beside it: a click from further off just walks him over.
-// Resolves once he has done it.
-export const reach = (el, range = 175) =>
+// Resolves once he has done it. With `direct` one click is enough: he walks over, and does it as he gets there.
+export const reach = (el, range = 175, direct) =>
   new Promise(done => {
-    el.classList.add('live');
-    el.task = () => {
-      const [x, y] = el.pos;
-      if (Math.hypot(x - hero.pos[0], y - hero.pos[1]) > range) return go(finder(x + (hero.pos[0] < x ? -95 : 95), y + 14));
+    const act = () => {
       el.task = null;
       el.classList.remove('live');
       done();
     };
+    el.classList.add('live');
+    const task = (el.task = () => {
+      const [x, y] = el.pos;
+      if (Math.hypot(x - hero.pos[0], y - hero.pos[1]) <= range) return act();
+      const way = finder(x + (hero.pos[0] < x ? -95 : 95), y + 14);
+      if (direct) way.at(-1)[2] = () => el.task === task && act(); // (unless the job has been done, or taken away, meanwhile)
+      go(way);
+    });
     if (el.classList.contains('wonder') || el.reachable) return; // already listening for clicks
     el.reachable = true;
     el.addEventListener('pointerdown', e => {
@@ -308,7 +320,7 @@ let last = performance.now();
   last = now;
   if (hero && active && !paused) {
     // Walk the route.
-    for (let step = SPEED * dt; route.length && step > 0; ) {
+    for (let step = (hero.speed ?? SPEED) * dt; route.length && step > 0; ) {
       const [x, y, then] = route[0], dx = x - hero.pos[0], dy = y - hero.pos[1], d = Math.hypot(dx, dy);
       if (d > step) {
         place(hero, hero.pos[0] + (dx / d) * step, hero.pos[1] + (dy / d) * step);
@@ -338,7 +350,7 @@ let last = performance.now();
       const t = behind(i), d = t ? Math.hypot(t[0] - s.pos[0], t[1] - s.pos[1]) : 0;
       s.going = d > (s.going ? 4 : HABIT[i][2]);
       if (s.going) {
-        const step = Math.min(d, SPEED * HABIT[i][3] * dt);
+        const step = Math.min(d, (hero.speed ?? SPEED) * HABIT[i][3] * dt);
         place(s, s.pos[0] + ((t[0] - s.pos[0]) / d) * step, s.pos[1] + ((t[1] - s.pos[1]) / d) * step);
       }
       s.classList.toggle('walk', s.going);
@@ -380,7 +392,7 @@ let who;
 export const speaker = g => (who = g);
 function aim() {
   bubble.style.left = clamp(who.pos[0] * active.zoom - active.cam, 300, VW - 300) + 'px';
-  bubble.style.top = (who.pos[1] - 246) * active.zoom + active.lift + VH - 900 + 'px';
+  bubble.style.top = (who.pos[1] - (who.tall ?? 246)) * active.zoom + active.lift + VH - 900 + 'px';
 }
 export function tell(text) {
   bubble.innerHTML = text;

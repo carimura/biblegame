@@ -3,8 +3,9 @@
 // Finishing a story opens the next one, if it is built: back on the map it turns from gray to colour in a flash.
 // The rest are gray: stories not yet earned, and places kept for stories not built yet (see the project notes),
 // each with a small picture so the map can be looked at before they exist.
-import { overlay, sleep } from './engine.js';
+import { overlay, sleep, when, LOCAL } from './engine.js';
 import { rnd, cut, hills, olive, tufts, sheep } from './art.js';
+import { start, music, sounding } from './audio.js';
 
 const STAR = 'M0,-10Q1.5,-1.5 10,0Q1.5,1.5 0,10Q-1.5,1.5 -10,0Q-1.5,-1.5 0,-10Z';
 const CLOUD = 'M0,0q40,-28 92,-14q32,-26 84,-8q54,-10 74,14q22,12 -8,18h-236q-34,-4 -6,-10z';
@@ -28,7 +29,7 @@ const STORIES = [
   ['ark', 'Noah’s Ark',
     sky('#c6dbe4') + cut([['#d9634a', 58], ['#f0c14d', 49], ['#6fa8c9', 40]].map(([c, r]) => `<path d="M${-r},22a${r},${r} 0 0 1 ${2 * r},0" fill="none" stroke="${c}" stroke-width="9"/>`).join(''), 1) +
     cut('<rect x="-24" y="-12" width="48" height="26" fill="#b98a55"/>' + p('M-31,-12L0,-30L31,-12Z', '#74492c') + '<rect x="-6" y="-6" width="12" height="12" rx="2" fill="#4a3c36"/>' + p('M-48,10H48Q42,40 24,42H-24Q-42,40 -48,10Z', '#8a5a37'), 1) +
-    waves(36, '#4f8fb5') + waves(54, '#6fa8c9')],
+    waves(36, '#4f8fb5') + waves(54, '#6fa8c9'), true],
   ['sea', 'Moses and the Sea',
     sky('#f6e3b4') + '<circle cy="-34" r="22" fill="#fff3c4"/>' + cut(p('M-24,74L-7,-14H7L24,74Z', '#e3c88e'), 1) +
     cut(p('M-74,-34Q-42,-50 -24,-26Q-10,-4 -24,74H-74Z', '#3f86b0') + p('M74,-34Q42,-50 24,-26Q10,-4 24,74H74Z', '#3f86b0'), 1) +
@@ -63,8 +64,10 @@ const finished = id => { try { return localStorage['done:' + id]; } catch {} };
 // A story can be played once it is built and the story before it on the road has been finished (the first always
 // can). The first time the map comes up after that, the story is still gray, and then takes its colours in a flash:
 // `shown` remembers that this has been seen. (Where nothing can be kept, every story that is built can be played.)
-const playable = i => { try { return STORIES[i][3] && (!i || !!localStorage['done:' + STORIES[i - 1][0]]); } catch { return STORIES[i][3]; } };
-const shown = id => { try { return localStorage['open:' + id]; } catch { return 1; } };
+// Played from the computer it is being made on (`LOCAL`), every story that is built is open and in colour from the
+// start: nothing has to be finished first.
+const playable = i => { try { return STORIES[i][3] && (LOCAL || !i || !!localStorage['done:' + STORIES[i - 1][0]]); } catch { return STORIES[i][3]; } };
+const shown = id => { try { return LOCAL || localStorage['open:' + id]; } catch { return 1; } };
 
 function country() {
   const r = rnd(23), pts = [[-240, 520], ...AT, [1840, 500]];
@@ -81,12 +84,18 @@ function country() {
     ${cut(`<path d="${road}" fill="none" stroke="#f1e2bf" stroke-width="30" stroke-linecap="round"/>`)}<path d="${road}" fill="none" stroke="#c8a56f" stroke-width="5" stroke-dasharray="1 20" stroke-linecap="round"/></svg>`;
 }
 
-// Show the map, and wait for a story to be chosen.
+// Show the map, and wait for a story to be chosen. The map has a small tune of its own. A browser lets no sound out
+// of a page newly opened until it has been clicked, and nothing can be done about that: so until sound is getting
+// out the map waits, dimmed, under "Click to begin", and the first click only wakes it and the tune (it chooses
+// nothing). Coming back from a story, sound is let out at once, and the map is awake as soon as it shows.
 export function map() {
-  const el = overlay(`<div class="map">${country()}${STORIES.map(([id, name, art], i) => {
+  start();
+  addEventListener('pointerdown', start, { once: true });
+  music('map');
+  const el = overlay(`<div class="map hushed">${country()}${STORIES.map(([id, name, art], i) => {
     const open = playable(i) && (!i || shown(id));
     return `<div class="stop${open ? ' open' : playable(i) ? ' due' : ''}${open && !finished(id) ? ' new' : ''}" data-id="${id}" style="left:${AT[i][0]}px;top:${AT[i][1]}px"><svg viewBox="-74 -74 148 148">${art}</svg><b class="card">${name}</b></div>`;
-  }).join('')}<div class="place card on">Choose a story</div><small>Scripture taken from the New King James Version®. Copyright © 1982 by Thomas Nelson. Used by permission. All rights reserved.</small></div>`);
+  }).join('')}<div class="place card on">Click to begin</div><small>Scripture taken from the New King James Version®. Copyright © 1982 by Thomas Nelson. Used by permission. All rights reserved.</small></div>`);
   el.classList.add('on');
   // the finished ones take their gold rims as you watch
   setTimeout(() => el.querySelectorAll('.stop').forEach(s => finished(s.dataset.id) && s.classList.add('done')), 700);
@@ -95,8 +104,11 @@ export function map() {
     s.className = 'stop open new opened';
     try { localStorage['open:' + s.dataset.id] = 1; } catch {}
   }), 2000);
+  const wake = () => (el.firstChild.classList.remove('hushed'), (el.querySelector('.place').textContent = 'Choose a story'));
+  when(sounding).then(wake);
   return new Promise(chosen => el.addEventListener('pointerdown', async e => {
     const stop = e.target.closest('.stop.open');
+    if (el.querySelector('.hushed')) return wake(); // (even if no sound ever comes)
     if (!stop) return;
     el.classList.remove('on');
     chosen(stop.dataset.id);

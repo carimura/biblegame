@@ -1,6 +1,6 @@
 import { overlay, click, sleep, roam, fade, clamp, arrive, lead, go, dissolve, pause } from './engine.js';
 import { cast } from './shared.js';
-import { start, sweep, mute } from './audio.js';
+import { start, sweep, mute, music } from './audio.js';
 import { map } from './map.js';
 import * as fold from './scene1.js';
 import * as pastures from './scene2.js';
@@ -13,10 +13,25 @@ import * as home from './scene8.js';
 import { build as theatre } from './theatre.js';
 import * as light from './day1.js';
 import * as sky from './day2.js';
+import * as land from './day3.js';
+import * as lights from './day4.js';
+import * as life from './day5.js';
+import * as beasts from './day6.js';
+import * as sabbath from './day7.js';
+import { build as shipyard } from './ark.js';
+import * as building from './ark1.js';
+import * as boarding from './ark2.js';
+import * as stalls from './ark3.js';
+import * as rain from './ark4.js';
+import * as nights from './ark5.js';
+import * as adrift from './ark6.js';
+import * as dove from './ark7.js';
+import * as bow from './ark8.js';
 
 sessionStorage.removeItem('tries'); // everything arrived (see index.html)
 const scenes = [fold, pastures, waters, lost, night, valley, table, home];
-const creation = [light, sky]; // the days of Creation that are made so far
+const creation = [light, sky, land, lights, life, beasts, sabbath]; // the seven days of Creation
+const voyage = [building, boarding, stalls, rain, nights, adrift, dove, bow]; // the eight scenes of Noah's Ark
 
 // Walk off one scene and into another, arriving on the given side of it.
 async function travel(i, side) {
@@ -50,19 +65,24 @@ function recall(n) {
 for (let i = scenes.length - 1; i >= 0; i--) scenes[i].build(i < scenes.length - 1 ? () => travel(i + 1, 'left') : recall, () => travel(i - 1, 'right'));
 
 // Adding a number to the address, such as #4, starts at that scene with the flock already gathered (and skips the map).
-// `#day2` does the same for Creation: it starts at that day, with the days before it already made.
-const first = clamp(+location.hash.slice(1) || 1, 1, scenes.length), day = clamp(+location.hash.slice(4) || 0, 0, creation.length);
-const creating = location.hash ? day > 0 : (await map()) === 'creation'; // the map of all the stories
+// `#day2` does the same for Creation: it starts at that day, with the days before it already made. And `#ark2` for
+// Noah's Ark: at that scene, with the ark as the scenes before it leave it.
+const hash = location.hash, nth = +hash.slice(4) || 0, first = clamp(+hash.slice(1) || 1, 1, scenes.length);
+const story = hash ? (hash.startsWith('#ark') ? 'ark' : nth ? 'creation' : 'shepherd') : await map(); // the map of all the stories
+// Creation and Noah's Ark are told one part after another, each with a `play` and a `skip`.
+const creating = story === 'creation', told = creating ? creation : story === 'ark' ? voyage : null;
 if (creating) {
   theatre(); // its black picture takes the place of the fold
-  for (const d of creation) d.build();
-}
+  for (const d of creation) d.build?.(); // (the last two days add nothing of their own until they are played)
+} else if (told) shipyard(); // so does the place where the ark is built
 
-const title = overlay(`<div class="card title"><h3>Chapter ${creating ? 2 : 1}</h3><h1>${creating ? 'Creation' : 'The Shepherd’s Song'}</h1><h2>${creating ? 'Genesis 1' : 'Psalm 23'}</h2><p>click to begin</p></div>`);
+const [chapter, name, text] = { shepherd: [1, 'The Shepherd’s Song', 'Psalm 23'], creation: [2, 'Creation', 'Genesis 1'], ark: [3, 'Noah’s Ark', 'Genesis 6–9'] }[story];
+const title = overlay(`<div class="card title"><h3>Chapter ${chapter}</h3><h1>${name}</h1><h2>${text}</h2><p>click to begin</p></div>`);
 title.classList.add('on');
 await click(title);
 start(); // audio needs a click first
-creating || sweep(); // Creation begins in silence
+music('still'); // the map's tune, which has gone on under the title, ends here
+told || sweep(); // Creation and Noah's Ark begin in silence
 title.classList.remove('on');
 
 // From here on, the Esc key stops everything where it is and asks: go on, or back to the map?
@@ -77,15 +97,11 @@ rest.addEventListener('pointerdown', e => {
 });
 await sleep(1400);
 
-if (creating) {
-  const from = Math.max(day, 1) - 1;
-  for (const d of creation.slice(0, from)) d.skip();
-  for (const d of creation.slice(from)) await d.play();
-  const more = overlay('<div class="card title"><h3>Creation</h3><h1>To be continued</h1><p>The third day is still to be made. Click to go back to the map.</p></div>');
-  more.classList.add('on');
-  await sleep(900);
-  await click(more);
-  location.href = location.pathname;
+if (told) {
+  const from = clamp(nth, 1, told.length) - 1;
+  for (const d of told.slice(0, from)) d.skip();
+  for (const d of told.slice(from)) await d.play();
+  location.href = location.pathname; // the last part ends the chapter: back to the map
 } else if (first > 1) {
   fold.skip();
   await travel(first - 1, 'left');

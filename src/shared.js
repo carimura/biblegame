@@ -61,10 +61,14 @@ export const NOTES = {
   owl: note('God made the night, and the creatures that wake in it.', 'You make darkness, and it is night,<br>In which all the beasts of the forest creep about.', 'Psalm 104:20'),
   badger: note('God made the rock badgers, small as they are, and gave them a safe home.', 'The rock badgers are a feeble folk,<br>Yet they make their homes in the crags;', 'Proverbs 30:26'),
   fear: note('When something frightens us, we can trust God.', 'Whenever I am afraid,<br>I will trust in You.', 'Psalm 56:3'),
-  light: note('God made the light, and it was good.', 'This is the message which we have heard from Him and declare to you, that God is light and in Him is no darkness at all.', '1 John 1:5'),
-  dark: note('God called the darkness Night. Nothing is hidden from Him in it.', 'Indeed, the darkness shall not hide from You,<br>But the night shines as the day;<br>The darkness and the light are both alike to You.', 'Psalm 139:12'),
+  // Creation, on its seventh day
   heaven: note('God made the sky, and it tells how great He is.', 'The heavens declare the glory of God;<br>And the firmament shows His handiwork.', 'Psalm 19:1'),
   above: note('God set waters above the sky, and they praise Him too.', 'Praise Him, you heavens of heavens,<br>And you waters above the heavens!', 'Psalm 148:4'),
+  land: note('God made the dry land, and the sea.', 'The sea is His, for He made it;<br>And His hands formed the dry land.', 'Psalm 95:5'),
+  plant: note('God made every growing thing, each with its own seed.', 'He causes the grass to grow for the cattle,<br>And vegetation for the service of man,<br>That he may bring forth food from the earth,', 'Psalm 104:14'),
+  fish: note('God filled the sea with living things, great and small.', 'This great and wide sea,<br>In which are innumerable teeming things,<br>Living things both small and great.', 'Psalm 104:25'),
+  beast: note('God made every animal, and every one is His.', 'For every beast of the forest is Mine,<br>And the cattle on a thousand hills.', 'Psalm 50:10'),
+  people: note('God made people in His own image. And He made you.', 'I will praise You, for I am fearfully and wonderfully made;<br>Marvelous are Your works,<br>And that my soul knows very well.', 'Psalm 139:14'),
 };
 
 // Counting out loud. Gives back a function: hand it each thing as it is collected or counted, and that thing's
