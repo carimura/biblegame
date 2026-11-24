@@ -14,6 +14,9 @@ built, filled, shut, driven through the storm, carried on the flood and set down
 and the bow is set in the cloud. The other five are places kept for stories not yet made: Moses and the Sea,
 David and Goliath, The Birth of Jesus, The Miracles of Jesus and The Resurrection.
 
+How the whole game plays, puzzle by puzzle and word for word, with nothing about how this version is drawn or
+coded, is in [GAMEPLAY.md](GAMEPLAY.md): it is written so that the game can be rebuilt in another engine and another look.
+
 ## Run it
 
 Plain HTML, CSS and JavaScript modules. There is no build step and nothing to install.
